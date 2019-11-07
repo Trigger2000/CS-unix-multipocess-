@@ -35,16 +35,16 @@ int main(int argc, char** argv)
             exit(EXIT_FAILURE);
         }
 
-	    fseek(file, 0, SEEK_END);
+	fseek(file, 0, SEEK_END);
         int size = ftell(file);
         fseek(file, 0, SEEK_SET);
         char* buf = (char*)calloc(size + 5, sizeof(char));
         fread(buf, sizeof(char), size, file);
 
         int reply = open(pid, O_WRONLY);
-	    write(reply, buf, size * sizeof(char));
+	write(reply, buf, size * sizeof(char));
 
-	    free(buf);
+	free(buf);
     }
 
     return 0;
