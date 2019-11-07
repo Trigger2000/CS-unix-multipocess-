@@ -16,7 +16,7 @@ int main(int argc, char** argv)
     sprintf(local_fifo, "%d", pid);
     mkfifo(local_fifo, 0777);
 
-    sleep(15);
+    //sleep(15);
     int fd = open("mypipe.p", O_WRONLY);
     write(fd, local_fifo, 5 * sizeof(char));
     int reply = open(local_fifo, O_RDONLY);
