@@ -28,55 +28,42 @@ union semun
 
 void inc (int sem, int number);
 void dec (int sem, int number);
+int getsemset();
 char* getitem(char** argv, int* size);
 
 int main(int argc, char** argv)
 {
-    key_t sem_key = ftok("key_file_sem", 18);
-    int sem = semget(sem_key, 3, 0777 | IPC_CREAT | IPC_EXCL); //0 = empty, 1 = mutex, 2 = full
-    printf("%d\n", sem);
-    if (sem == -1)
-    {
-        sem = semget(sem_key, 3, 0777);
-        union semun temp;
-    }
-    else
-    {
-        printf("check\n");
-        union semun temp;
-        temp.val = 1;
-        semctl(sem, 0, SETVAL, temp);
-        semctl(sem, 1, SETVAL, temp);
-    }
-    print();
-
+    //sleep(15);
     int size = 0;
     char* buf = getitem(argv, &size);
-    //key_t key = ftok("key_file_shm", 10);
-    //int mem = shmget(key, size + 5, 0777 | IPC_CREAT);
 
     while (1)
     {
-    dec(sem, 0);
-    dec(sem, 1);
-    print();
+        int sem = getsemset();
+        //print();
 
-    key_t key = ftok("key_file_shm", 10);
-    int mem = shmget(key, size + 5, 0777 | IPC_CREAT | IPC_EXCL);
-    if (mem == -1)
-    {
-        mem = shmget(key, 1, 0777);
+        dec(sem, 0);
+        dec(sem, 1);
+        //print();
+
+        key_t key = ftok("key_file_shm", 20);
+        int mem = shmget(key, size + 5, 0777 | IPC_CREAT | IPC_EXCL);
+        if (mem == -1)
+        {
+            mem = shmget(key, 1, 0777);
+        }
+        char* membuf = (char*)shmat(mem, NULL, 0);
+        strcpy(membuf, buf);
+        shmdt(membuf);
+
+        inc(sem, 1);
+        inc(sem, 2);
+        //print();
+        //printf("--------------------------\n");
     }
-    char* membuf = (char*)shmat(mem, NULL, 0);
-    strcpy(membuf, buf);
-    shmdt(membuf);
 
-    inc(sem, 1);
-    inc(sem, 2);
-    print();
-    printf("--------------------------\n");
-    }
-
+    //semctl(sem, 0, IPC_RMID);
+    //shmctl(mem, IPC_RMID, NULL);
     return 0;
 }
 
@@ -86,7 +73,10 @@ void inc (int sem, int number)
     temp.sem_num = number;
     temp.sem_flg = SEM_UNDO;
     temp.sem_op = 1;
-    semop(sem, &temp, 1);
+    if (semop(sem, &temp, 1) == -1)
+    {
+        //printf("inc error\n");
+    }
 }
 
 void dec (int sem, int number)
@@ -95,7 +85,32 @@ void dec (int sem, int number)
     temp.sem_num = number;
     temp.sem_flg = SEM_UNDO;
     temp.sem_op = -1;
-    semop(sem, &temp, 1);
+    if (semop(sem, &temp, 1) == -1)
+    {
+        //printf("dec error\n");
+    }
+}
+
+int getsemset()
+{
+    key_t sem_key = ftok("key_file_sem", 30);
+    int sem = semget(sem_key, 3, 0777 | IPC_CREAT | IPC_EXCL); //0 = empty, 1 = mutex, 2 = full
+    //printf("%d\n", sem);
+    if (sem == -1)
+    {
+        //printf("already exist\n");
+        sem = semget(sem_key, 3, 0777);
+    }
+    else
+    {
+        //printf("created\n");
+        union semun temp;
+        temp.val = 1;
+        semctl(sem, 0, SETVAL, temp);
+        semctl(sem, 1, SETVAL, temp);
+    }
+
+    return sem;
 }
 
 char* getitem(char** argv, int* size)
@@ -111,4 +126,6 @@ char* getitem(char** argv, int* size)
     fseek(file, 0, SEEK_SET);
     char* buf = (char*)calloc(*size + 5, sizeof(char));
     fread(buf, sizeof(char), *size, file);
+
+    return buf;
 }

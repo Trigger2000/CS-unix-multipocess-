@@ -28,29 +28,19 @@ union semun
 
 void inc (int sem, int number);
 void dec (int sem, int number);
+int getsemset();
 
 int main(int argc, char** argv)
 {
-    key_t sem_key = ftok("key_file_sem", 18);
-    int sem = semget(sem_key, 3, 0777 | IPC_CREAT | IPC_EXCL); //0 = empty, 1 = mutex, 2 = full
-    if (sem == -1)
-    {
-        sem = semget(sem_key, 3, 0777);
-    }
-    else
-    {
-        union semun temp;
-        temp.val = 1;
-        semctl(sem, 0, SETVAL, temp);
-        semctl(sem, 1, SETVAL, temp);
-    }
-    print();
+    //sleep(15);
+    int sem = getsemset();
+    //print();
 
     dec (sem, 2);
     dec (sem, 1);
-    print();
+    //print();
 
-    key_t key = ftok("key_file_shm", 10);
+    key_t key = ftok("key_file_shm", 20);
     int mem = shmget(key, 1, 0777 | IPC_CREAT | IPC_EXCL);
     if (mem == -1)
     {
@@ -64,9 +54,9 @@ int main(int argc, char** argv)
     inc (sem, 1);
     inc (sem, 0);
 
-    print();
-    printf("--------------------------\n");
-    //semctl(sem, 0, IPC_RMID);
+    //print();
+    //printf("--------------------------\n");
+    semctl(sem, 0, IPC_RMID);
 
     return 0;
 }
@@ -77,7 +67,10 @@ void inc (int sem, int number)
     temp.sem_num = number;
     temp.sem_flg = SEM_UNDO;
     temp.sem_op = 1;
-    semop(sem, &temp, 1);
+    if (semop(sem, &temp, 1) == -1)
+    {
+        //printf("inc error\n");
+    }
 }
 
 void dec (int sem, int number)
@@ -86,5 +79,30 @@ void dec (int sem, int number)
     temp.sem_num = number;
     temp.sem_flg = SEM_UNDO;
     temp.sem_op = -1;
-    semop(sem, &temp, 1);
+    if (semop(sem, &temp, 1) == -1)
+    {
+        //printf("dec error\n");
+    }
+}
+
+int getsemset()
+{
+    key_t sem_key = ftok("key_file_sem", 30);
+    int sem = semget(sem_key, 3, 0777 | IPC_CREAT | IPC_EXCL); //0 = empty, 1 = mutex, 2 = full
+    //printf("%d\n", sem);
+    if (sem == -1)
+    {
+        //printf("already exist\n");
+        sem = semget(sem_key, 3, 0777);
+    }
+    else
+    {
+        //printf("created\n");
+        union semun temp;
+        temp.val = 1;
+        semctl(sem, 0, SETVAL, temp);
+        semctl(sem, 1, SETVAL, temp);
+    }
+
+    return sem;
 }

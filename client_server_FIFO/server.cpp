@@ -10,41 +10,34 @@
 
 int main(int argc, char** argv)
 {
-    printf("Server\n");
-    //sleep(15);
     char* pid = (char*)calloc(6, sizeof(char));
-    while(1)
-    {
-        int fd = open("mypipe.p", O_RDONLY);
-        read(fd, pid, 5 * sizeof(char));
+    int fd = open("mypipe.p", O_RDONLY);
+    read(fd, pid, 5 * sizeof(char));
 
-        if (argc < 2)
-        {
-            printf("Nothing to write, try again\n");
-            exit(EXIT_FAILURE);
-        }
-        if (argc > 2)
-        {
-            printf("Too many arguments, try again\n");
-            exit(EXIT_FAILURE);
-        }
-        FILE* file = fopen(argv[1], "r");
-        if (file == nullptr)
+    if (argc != 2)
+    {
+        printf("Incorrect arguments\n");
+        int reply = open(pid, O_WRONLY);
+        char sent[20] = "Nothing to read";
+        write(reply, &sent, 20 * sizeof(char));
+        exit(EXIT_FAILURE);
+    }
+    else
+    {
+        int file = open(argv[1], O_RDONLY);
+        if (file == -1)
         {
             printf("Unable to open file %s, try again\n", argv[1]);
             exit(EXIT_FAILURE);
         }
 
-	fseek(file, 0, SEEK_END);
-        int size = ftell(file);
-        fseek(file, 0, SEEK_SET);
-        char* buf = (char*)calloc(size + 5, sizeof(char));
-        fread(buf, sizeof(char), size, file);
-
+        char buf = 0;
         int reply = open(pid, O_WRONLY);
-	write(reply, buf, size * sizeof(char));
-
-	free(buf);
+        while (read(file, &buf, 1))
+        {
+	        write(reply, &buf, 1);
+            buf = 0;
+        } 
     }
 
     return 0;
