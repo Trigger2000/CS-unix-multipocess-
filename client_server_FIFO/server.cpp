@@ -31,14 +31,14 @@ int main(int argc, char** argv)
             exit(EXIT_FAILURE);
         }
 
-        char buf = 0;
         int reply = open(pid, O_WRONLY);
-        while (read(file, &buf, 1))
+        char* buf = (char*)calloc(101, sizeof(char));
+        int amount = read(file, buf, 100);
+        while (amount != 0)
         {
-	        write(reply, &buf, 1);
-            buf = 0;
+	        write(reply, buf, amount);
+            amount = read(file, buf, 100);
         } 
     }
-
     return 0;
 }

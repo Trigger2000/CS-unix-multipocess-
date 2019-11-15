@@ -7,6 +7,7 @@
 #include <sys/wait.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <string.h>
 
 int main(int argc, char** argv)
 {    
@@ -16,20 +17,20 @@ int main(int argc, char** argv)
     mkfifo(local_fifo, 0777);
 
     int fd = open("mypipe.p", O_WRONLY | O_NONBLOCK);
-    write(fd, local_fifo, 5 * sizeof(char));
+    write(fd, local_fifo, 5);
 
     int reply = open(local_fifo, O_RDONLY | O_NONBLOCK);
     sleep(1);
 
-    char buf = 0;
-    while (read(reply, &buf, 1))
+    char* buf = (char*)calloc(101, sizeof(char));
+    int amount = read(reply, buf, 100);
+    while (amount != 0)
     {
-        printf("%c", buf);
-        buf = 0;
-    } 
+        write(1, buf, amount);
+        amount = read(reply, buf, 100);
+    }
 
     unlink(local_fifo);
     free(local_fifo);
-
     return 0;
 }

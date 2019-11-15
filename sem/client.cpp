@@ -11,6 +11,8 @@
 #include <sys/shm.h>
 #include <sys/sem.h>
 
+const int key = 36;
+
 union semun 
 {
     int              val;    /* Value for SETVAL */
@@ -32,30 +34,47 @@ int getsemset();
 
 int main(int argc, char** argv)
 {
-    //sleep(15);
     int sem = getsemset();
     //print();
 
-    dec (sem, 2);
-    dec (sem, 1);
-    //print();
-
-    key_t key = ftok("key_file_shm", 20);
-    int mem = shmget(key, 1, 0777 | IPC_CREAT | IPC_EXCL);
-    if (mem == -1)
+    if (semctl(sem, 2, GETVAL) == 0)
     {
-        mem = shmget(key, 1, 0777);
+        exit(EXIT_FAILURE);
     }
-    char* membuf = (char*)shmat(mem, NULL, 0);
-    printf("%s\n", membuf);
-    shmdt(membuf);
-    shmctl(mem, IPC_RMID, NULL);
 
-    inc (sem, 1);
-    inc (sem, 0);
+    int mem = 0;
+    //char prev = 0;
+    while (1)
+    {
+        dec (sem, 2);
+        dec (sem, 1);
+        //print();
 
+        key_t key = ftok("key_file_shm", key);
+        mem = shmget(key, 1, 0777 | IPC_CREAT | IPC_EXCL);
+        if (mem == -1)
+        {
+            mem = shmget(key, 1, 0777);
+        }
+        char* membuf = (char*)shmat(mem, NULL, 0);
+        printf("%c", *membuf);
+        if (*membuf == '\0')
+        {
+            shmdt(membuf);
+            inc (sem, 1);
+            inc (sem, 0);
+            break;
+        }
+        printf("q");
+        printf("%c", *membuf);
+        shmdt(membuf);
+        
+        inc (sem, 1);
+        inc (sem, 0);
+    }
     //print();
-    //printf("--------------------------\n");
+
+    shmctl(mem, IPC_RMID, NULL);
     semctl(sem, 0, IPC_RMID);
 
     return 0;
@@ -87,7 +106,7 @@ void dec (int sem, int number)
 
 int getsemset()
 {
-    key_t sem_key = ftok("key_file_sem", 30);
+    key_t sem_key = ftok("key_file_sem", key);
     int sem = semget(sem_key, 3, 0777 | IPC_CREAT | IPC_EXCL); //0 = empty, 1 = mutex, 2 = full
     //printf("%d\n", sem);
     if (sem == -1)

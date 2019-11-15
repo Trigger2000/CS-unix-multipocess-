@@ -10,6 +10,10 @@
 #include <sys/wait.h>
 #include <sys/shm.h>
 #include <sys/sem.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
+const int key = 36;
 
 union semun 
 {
@@ -29,37 +33,42 @@ union semun
 void inc (int sem, int number);
 void dec (int sem, int number);
 int getsemset();
-char* getitem(char** argv, int* size);
 
 int main(int argc, char** argv)
 {
-    //sleep(15);
-    int size = 0;
-    char* buf = getitem(argv, &size);
-
-    while (1)
+    int file = open(argv[1], O_RDONLY);
+    if (file == -1)
     {
-        int sem = getsemset();
+        printf("Unable to open file %s, try again\n", argv[1]);
+        exit(EXIT_FAILURE);
+    }
+
+    int sem = getsemset();
+
+    char buf = 'a';
+    while (buf != '\0')
+    {
+        read(file, &buf, 1);
+        //read(file, &buf, 1);
         //print();
 
         dec(sem, 0);
         dec(sem, 1);
         //print();
 
-        key_t key = ftok("key_file_shm", 20);
-        int mem = shmget(key, size + 5, 0777 | IPC_CREAT | IPC_EXCL);
+        key_t key = ftok("key_file_shm", key);
+        int mem = shmget(key, 1, 0777 | IPC_CREAT | IPC_EXCL);
         if (mem == -1)
         {
             mem = shmget(key, 1, 0777);
         }
         char* membuf = (char*)shmat(mem, NULL, 0);
-        strcpy(membuf, buf);
+        strcpy(membuf, &buf);
         shmdt(membuf);
 
         inc(sem, 1);
         inc(sem, 2);
         //print();
-        //printf("--------------------------\n");
     }
 
     //semctl(sem, 0, IPC_RMID);
@@ -93,7 +102,7 @@ void dec (int sem, int number)
 
 int getsemset()
 {
-    key_t sem_key = ftok("key_file_sem", 30);
+    key_t sem_key = ftok("key_file_sem", key);
     int sem = semget(sem_key, 3, 0777 | IPC_CREAT | IPC_EXCL); //0 = empty, 1 = mutex, 2 = full
     //printf("%d\n", sem);
     if (sem == -1)
@@ -111,21 +120,4 @@ int getsemset()
     }
 
     return sem;
-}
-
-char* getitem(char** argv, int* size)
-{
-    FILE* file = fopen(argv[1], "r");
-    if (file == nullptr)
-    {
-        printf("Unable to open file %s, try again\n", argv[1]);
-        exit(EXIT_FAILURE);
-    }
-	fseek(file, 0, SEEK_END);
-    *size = ftell(file);
-    fseek(file, 0, SEEK_SET);
-    char* buf = (char*)calloc(*size + 5, sizeof(char));
-    fread(buf, sizeof(char), *size, file);
-
-    return buf;
 }
