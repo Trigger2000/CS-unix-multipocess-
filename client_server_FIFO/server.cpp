@@ -34,8 +34,10 @@ int main(int argc, char** argv)
         int reply = open(pid, O_WRONLY);
         char* buf = (char*)calloc(101, sizeof(char));
         int amount = read(file, buf, 100);
+
         while (amount != 0)
         {
+            //sleep(10);
 	        write(reply, buf, amount);
             amount = read(file, buf, 100);
         } 
