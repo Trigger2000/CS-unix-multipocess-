@@ -61,7 +61,7 @@ int main(int argc, char** argv)
 
     while (1)
     {  
-        !1! if (semop(sem, startread, 3) == -1) 
+        if (semop(sem, startread, 3) == -1) 
         {
             break;
         }
@@ -71,7 +71,7 @@ int main(int argc, char** argv)
         bcopy(membuf_size, &size, 1);
         write(1, membuf, size);
 
-        !1! if (semop(sem, endread, 3) == -1)
+        if (semop(sem, endread, 3) == -1)
         {
             break;
         }
@@ -99,7 +99,6 @@ int getsemset()
     lock[2].sem_num = 1;
     lock[2].sem_op = 1;
     lock[2].sem_flg = SEM_UNDO;
-    !2! все что ниже
     semop(sem, lock, 3);
 
     lock[0].sem_num = 0;
