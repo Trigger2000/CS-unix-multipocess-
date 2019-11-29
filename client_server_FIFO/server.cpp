@@ -37,7 +37,7 @@ int main(int argc, char** argv)
 
         while (amount != 0)
         {
-            sleep(15);
+            //sleep(15);
 	        write(reply, buf, amount);
             amount = read(file, buf, 100);
         } 
