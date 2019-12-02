@@ -17,10 +17,6 @@ int main(int argc, char** argv)
 
     int fd = open("mypipe.p", O_WRONLY | O_NONBLOCK);
     write(fd, local_fifo, 5);
-<<<<<<< HEAD
-=======
-    
->>>>>>> f77fa817c0c1e94a59fa04920852ee30a7ecfcc8
     
     int reply = open(local_fifo, O_RDONLY | O_NONBLOCK);
     sleep(1);
