@@ -10,14 +10,13 @@
 
 int main(int argc, char** argv)
 {    
-    !1! pid_t pid = getpid();
+    pid_t pid = getpid();
     char* local_fifo = (char*)calloc(6, sizeof(char));
     sprintf(local_fifo, "%d", pid);
     mkfifo(local_fifo, 0777);
 
     int fd = open("mypipe.p", O_WRONLY | O_NONBLOCK);
     write(fd, local_fifo, 5);
-    !1!
     
     int reply = open(local_fifo, O_RDONLY | O_NONBLOCK);
     sleep(1);
@@ -31,7 +30,6 @@ int main(int argc, char** argv)
     }
     while (amount != 0)
     {
-        //sleep(10);
         write(1, buf, amount);
         amount = read(reply, buf, 100);
     }

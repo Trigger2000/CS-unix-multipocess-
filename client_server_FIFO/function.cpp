@@ -10,6 +10,18 @@
 
 int compare (int fd1, int fd2)
 {
+    struct stat fs1, fs2;
+    fstat(fd1, &fs1);
+    fstat(fd2, &fs2);
+
+    if (fs1.st_dev == fs2.st_dev && fs1.st_ino == fs2.st_ino)
+    {
+        return 1;
+    }
+    else
+    {
+        return 0;
+    }
     
 }
 
