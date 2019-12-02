@@ -26,13 +26,13 @@ void setzero (int signum)
 
 void setone (int signum)
 {
-    printf("o\n");
+    //printf("o\n");
     globalbit = 1;
 }
 
 void setcheck (int signum)
 {
-    printf("c\n");
+    //printf("c\n");
     check = 1;
 }
 
