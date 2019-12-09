@@ -22,31 +22,32 @@ struct connection
     char* buf;
 };
 
-int getn(int argc, char** argv);
-void child(int chnum, int n, connection con);
+void child(int rd, int wd);
 void parent(int n, connection* con);
-void parent_transfer(int n, connection* con, fd_set* setw_copy, fd_set* setr_copy, char** bufs);
-void child_transfer(connection* con, fd_set* setw_copy, fd_set* setr_copy);
 
 int main(int argc, char** argv)
 {
-    int n = getn(argc, argv);
+    printf("ppid %d\n", getpid());
+    int n = strtol(argv[1], NULL, 10);
+    if (n <= 0)
+    {
+        printf("Incorrect amount of children\n");
+        exit(EXIT_FAILURE);
+    }
 
-    connection* con = (connection*)calloc(n, sizeof(connection));
-    con[0].pttoch[READ] = STDIN_FILENO;
-    pipe(con[0].chtopt);
-    fcntl(con[0].chtopt[READ], F_SETFD, O_NONBLOCK);
+    int fd = open(argv[2], O_RDONLY);
+    if (fd == -1)
+    {
+        printf("Unable to open file %s", argv[2]);
+        exit(EXIT_FAILURE);
+    }
 
-    con[n - 1].chtopt[WRITE] = STDOUT_FILENO;
-    pipe(con[n - 1].pttoch);
-    fcntl(con[0].pttoch[WRITE], F_SETFD, O_NONBLOCK);
+    connection* con = (connection*)calloc(n - 1, sizeof(connection));
 
-    for (int i = 1; i < n - 1; ++i)
+    for (int i = 0; i < n - 1; ++i)
     {
         pipe(con[i].chtopt);
         pipe(con[i].pttoch);
-        fcntl(con[i].chtopt[READ], F_SETFD, O_NONBLOCK);
-        fcntl(con[i].pttoch[WRITE], F_SETFD, O_NONBLOCK);
     }
 
     pid_t id = 0;
@@ -60,74 +61,57 @@ int main(int argc, char** argv)
 
     if (id == 0)
     {
-        child(i, n, con[i]);
+        if (i == 0)
+        {
+            close(con[i].chtopt[READ]);
+            child(fd, con[i].chtopt[WRITE]);
+        }
+        else if (i == n - 1)
+        {
+            close(con[i - 1].pttoch[WRITE]);
+            child(con[i - 1].pttoch[READ], STDOUT_FILENO);
+        }
+        else
+        {
+            close(con[i].chtopt[READ]);
+            close(con[i - 1].pttoch[WRITE]);
+            child(con[i - 1].pttoch[READ], con[i].chtopt[WRITE]);
+        }
     }
     else
     {
+        if (n == 1)
+        {
+            exit(EXIT_SUCCESS);
+        }
+
         parent(n, con);
     }
 
     exit(EXIT_SUCCESS);
 }
 
-void child (int chnum, int n, connection con)
+void child (int rd, int wd)
 {
-    int temp = pow(3, n - chnum);
-    if (temp > 81)
-    {
-        con.buf = (char*)calloc(81 * 1024, sizeof(char));
-    }
-    else
-    {
-        con.buf = (char*)calloc(temp * 1024, sizeof(char));
-    }
-    
-    close(con.chtopt[READ]);
-    close(con.pttoch[WRITE]);
-    int max = 0;
-    if (con.chtopt[WRITE] > con.pttoch[READ])
-    {
-        max = con.chtopt[WRITE];
-    }
-    else
-    {
-        max = con.pttoch[READ];
-    }
-    
-    fd_set setw, setr, setw_copy, setr_copy;
-    FD_ZERO(&setw);
-    FD_ZERO(&setr);
-    FD_SET(con.chtopt[WRITE], &setw);
-    FD_SET(con.pttoch[READ], &setr);
-
+    char* buf = (char*)calloc(1024, sizeof(char));
     while (1)
     {
-        setw_copy = setw;
-        setr_copy = setr;
-        int check = select(max + 1, &setr_copy, &setw_copy, NULL, NULL);
-        if (check == -1)
+        if (strlen(buf) != 0)
         {
-            printf("child error\n");
-            break;
+            if (write(wd, buf, strlen(buf)) == -1)
+            {
+                break;
+            }
+            memset(buf, 0, 1024);
         }
-        else
+
+        if (strlen(buf) == 0)
         {
-            child_transfer(&con, &setw_copy, &setr_copy);
+            if (read(rd, buf, 10) == 0)
+            {
+                break;
+            }
         }
-    }
-}
-
-void child_transfer(connection* con, fd_set* setw_copy, fd_set* setr_copy)
-{
-    if (FD_ISSET(con->pttoch[READ], setr_copy) && strlen(con->buf) == 0)
-    {
-        read(con->pttoch[READ], con->buf, 1024);
-    }
-
-    if (FD_ISSET(con->chtopt[WRITE], setw_copy))
-    {
-        write(con->chtopt[WRITE], con->buf, 1024);
-        memset(con->buf, 0, 1024);
     }
 }
 
@@ -136,120 +120,110 @@ void parent (int n, connection* con)
     char** bufs = (char**)calloc(n - 1, sizeof(char*));
     for (int i = 0; i < n - 1; ++i)
     {
-        int temp = pow(3, n - i);
-        if (temp > 81)
-        {
-            bufs[i] = (char*)calloc(81 * 1024, sizeof(char));
-        }
-        else
-        {
-            bufs[i] = (char*)calloc(temp * 1024, sizeof(char));
-        }
-    }
-
-    fd_set setw, setr, setw_copy, setr_copy;
-    FD_ZERO(&setw);
-    FD_ZERO(&setr);
-    int max = 0;
-    for (int i = 0; i < n; ++i)
-    {
+        bufs[i] = (char*)calloc(4 * 1024, sizeof(char));
         close(con[i].chtopt[WRITE]);
-        if (i != n - 1)
-        {
-            FD_SET(con[i].chtopt[READ], &setr);
-            if (con[i].chtopt[READ] > max)
-            {
-                max = con[i].chtopt[READ];
-            }
-        }
-
         close(con[i].pttoch[READ]);
-        if (i != 0)
-        {
-            FD_SET(con[i].pttoch[WRITE], &setw);
-            if (con[i].pttoch[WRITE] > max)
-            {
-                max = con[i].pttoch[WRITE];
-            }
-        }
     }
 
-    while (1)
+    fd_set setr, setw;
+    FD_ZERO(&setr);
+    FD_ZERO(&setw);
+    int max = 0;
+    for (int i = 0; i < n - 1; ++i)
     {
-        setw_copy = setw;
-        setr_copy = setr;
+        FD_SET(con[i].chtopt[READ], &setr);
+        if (con[i].chtopt[READ] > max)
+        {
+            max = con[i].chtopt[READ];
+        }
+
+        FD_SET(con[i].pttoch[WRITE], &setw);
+        if (con[i].pttoch[WRITE] > max)
+        {
+            max = con[i].pttoch[WRITE];
+        }
+        fcntl(con[i].chtopt[READ], F_SETFL, O_NONBLOCK);
+        fcntl(con[i].pttoch[WRITE], F_SETFL, O_NONBLOCK);
+    }
+
+    int in = -1, out = -2, flag1 = 0, flag2 = 0, first_child_dead = 0, child_dead = 0; 
+    while (1) //рассмотри при маленьком n
+    {
+        fd_set setr_copy = setr;
+        fd_set setw_copy = setw;
 
         int check = select(max + 1, &setr_copy, &setw_copy, NULL, NULL);
         if (check == -1)
         {
-            printf("parent error\n");
-            break;
+            printf("Parent error\n");
+            exit(EXIT_FAILURE);
         }
-        else
-        {
-            parent_transfer(n, con, &setw_copy, &setr_copy, bufs);
-        }
-    }
-}
 
-void parent_transfer(int n, connection* con, fd_set* setw_copy, fd_set* setr_copy, char** bufs)
-{
-    for (int i = 0; i < n; ++i)
-    {
-        if (i != n - 1)
+        for (int i = 0; i < n - 1; ++i)
         {
-            if (FD_ISSET(con[i].chtopt[READ], setr_copy) && strlen(bufs[i]) == 0)
+            int tmp = read(con[i].chtopt[READ], NULL, 1);
+            if (tmp == -1 && i == 0)
             {
-                read(con[i].chtopt[READ], bufs[i], 1024);
+                first_child_dead++;
+            }
+            else if (tmp == -1)
+            {
+                child_dead++;
+            }
+
+            if (i == n - 2)
+            {
+                write(con[i].pttoch[WRITE], NULL, 1);
+            }
+
+            if (FD_ISSET(con[i].chtopt[READ], &setr) && strlen(bufs[i]) == 0)
+            {
+                if (i == 0)
+                {
+                    if (flag1 == 0)
+                    {
+                        in = 0;
+                        flag1++;
+                    }
+                    int tmp = read(con[i].chtopt[READ], bufs[i], 10);
+                    if (tmp != -1)
+                        in += tmp;
+                }
+                else
+                {
+                    read(con[i].chtopt[READ], bufs[i], 10);
+                }
+            }
+
+            if (FD_ISSET(con[i].pttoch[WRITE], &setw) && strlen(bufs[i]) != 0)
+            {
+                if (i == n - 2)
+                {
+                    if (flag2 == 0)
+                    {
+                        out = 0;
+                        flag2++;
+                    }
+                    int tmp = write(con[i].pttoch[WRITE], bufs[i], strlen(bufs[i]));
+                    if (tmp != -1)
+                        out += tmp;
+                }
+                else
+                {
+                    write(con[i].pttoch[WRITE], bufs[i], strlen(bufs[i]));
+                }
+                memset(bufs[i], 0, 4 * 1024);
             }
         }
-
-        if (i != 0)
+        
+        /*printf("in is %d\n", in);
+        printf("out is %d\n", out);
+        printf("child dead is %d\n", child_dead);
+        printf("first child dead is %d\n", first_child_dead); */
+        //sleep(1);
+        if ((in == out && first_child_dead > 0) || (child_dead > 0 && first_child_dead == 0))
         {
-            if (FD_ISSET(con[i].pttoch[WRITE], setw_copy))
-            {
-                write(con[i].pttoch[WRITE], bufs[i - 1], 1024);
-                memset(bufs[i - 1], 0, 1024);
-            }
+            exit(EXIT_SUCCESS);
         }
-    } 
-}
-
-int getn (int argc, char** argv)
-{
-    int base;
-    char *endptr, *str;
-    long val;
-
-    if (argc < 2) 
-    {
-       fprintf(stderr, "Usage: %s str [base]\n", argv[0]);
-       exit(EXIT_FAILURE);
     }
-
-    str = argv[1];
-    base = (argc > 2) ? atoi(argv[2]) : 10;
-
-    errno = 0;   
-    val = strtol(str, &endptr, base);
-
-    if ((errno == ERANGE && (val == LONG_MAX || val == LONG_MIN)) || (errno != 0 && val == 0)) 
-    {
-        perror("strtol");
-        exit(EXIT_FAILURE);
-    }
-
-    if (endptr == str) 
-    {
-        fprintf(stderr, "No digits were found\n");
-        exit(EXIT_FAILURE);
-    }
-
-    if (*endptr != '\0')
-    {
-        printf("Further characters after number: %s\n", endptr);
-        exit(EXIT_FAILURE);
-    }
-
-    return val;
 }

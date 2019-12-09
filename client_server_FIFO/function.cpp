@@ -27,6 +27,10 @@ int compare (int fd1, int fd2)
 
 int main()
 {
+    int fd = open("file", O_RDONLY);
+    sleep(1); //unlink, rename, 
+    int fd1 = open("file", O_WRONLY);
 
+    printf("%d\n", compare(fd, fd1));
     return 0;
 }
