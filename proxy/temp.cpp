@@ -12,41 +12,56 @@
 #include <fcntl.h>
 #include <sys/select.h>
 
-int main(int argc, char** argv)
+struct temp
 {
     int fd[2];
-    pipe(fd);
-    fd_set tmp1, tmp2;
-    FD_ZERO(&tmp1);
-    FD_ZERO(&tmp2);
-    FD_SET(fd[0], &tmp1);
-    FD_SET(fd[1], &tmp2);
-    int max = 0;
-    if (fd[0] > fd[1])
+};
+
+int main(int argc, char** argv)
+{
+    pid_t pid = 0;
+    temp* ar = (temp*)calloc(5, sizeof(temp));
+    int i = 0;
+    int fd[2];
+    for (i = 0; i < 5; ++i)
     {
-        max = fd[0];
+        pipe(fd);
+        pid = fork();
+        if (pid == 0)
+        {
+            break;
+        }
+        else
+        {
+            temp t;
+            t.fd[0] = fd[0];
+            t.fd[1] = fd[1];
+            ar[i] = t;
+        }
+            
+    }
+
+    if (pid == 0)
+    {
+        printf("child %d: 0 = %d, 1 = %d\n", i, fd[0], fd[1]);
+        for (int j = 0; j < 5; ++j)
+        {
+            printf("%d %d\n", ar[j].fd[0], ar[j].fd[1]);
+        }
     }
     else
     {
-        max = fd[1];
+        for (int j = 0; j < 5; ++j)
+        {
+            wait(0);
+        }
+        printf("parent\n");
+        for (int j = 0; j < 5; ++j)
+        {
+            printf("%d %d\n", ar[j].fd[0], ar[j].fd[1]);
+        }
     }
-
-    close(fd[1]);
     
-    char c = 'c';
-    write(fd[1], &c, 1);
-    int res = read(fd[0], NULL, 1);
-    printf("res is %d\n", res);
-    char buf;
-    res = read(fd[0], &buf, 1);
-    printf("res is %d\n", res);
-    /*char buf;
-    close(fd[1]);
-    int res = select(fd[0] + 1, &tmp1, NULL, NULL, NULL);
-    printf("%d %d\n", res, read(fd[0], &buf, 1));
-
-    res = select(fd[1] + 1, NULL, &tmp2, NULL, NULL);
-    printf("%d\n", res); */
 
     return 0;
 }
