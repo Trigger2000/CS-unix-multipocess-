@@ -239,19 +239,15 @@ void parent (int n, connection* con)
 int getsize(int n, int i)
 {
     i = n - i - 1;
-	int res = 1;
-
-	while (i > 0)
-	{
-		res *= 3;
-        
-		if (res > 81)
+    int res = 1;
+    for (; i > 0; --i)
+    {
+        res *= 3;
+        if (res > 81)
         {
-			return 81;
+            return 81;
         }
+    }
 
-        i--;
-	}
-
-	return res;
+    return res;
 }
