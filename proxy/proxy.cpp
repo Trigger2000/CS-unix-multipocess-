@@ -244,10 +244,12 @@ int getsize(int n, int i)
 	while (i > 0)
 	{
 		res *= 3;
+        
 		if (res > 81)
         {
 			return 81;
         }
+
         i--;
 	}
 
