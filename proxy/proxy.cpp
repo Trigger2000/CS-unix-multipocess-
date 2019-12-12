@@ -19,8 +19,10 @@
 struct connection
 {
     int chtopt[2], pttoch[2];
-    int filled = 0;
-    int size = 0;
+    char* cur;
+    char* end;
+    char* begin;
+    char* buf;
 };
 
 void child(int rd, int wd, int num);
@@ -30,7 +32,7 @@ int getsize(int n, int i);
 int main(int argc, char** argv)
 {
     int n = strtol(argv[1], NULL, 10);
-    if (n <= 0 || n > 255)
+    if (n <= 0 || n > 509)
     {
         printf("Incorrect amount of children\n");
         exit(EXIT_FAILURE);
@@ -59,15 +61,20 @@ int main(int argc, char** argv)
         else
         {
             connection temp;
+            close(chtopt[WRITE]);
+            close(pttoch[READ]);
             temp.chtopt[READ] = chtopt[READ];
-            temp.chtopt[WRITE] = chtopt[WRITE];
-            temp.pttoch[READ] = pttoch[READ];
             temp.pttoch[WRITE] = pttoch[WRITE];
             con[i] = temp;
         }
     }
 
-    if (id == 0)
+    if (id != 0)
+    {
+        close(con[0].pttoch[WRITE]);
+        parent(n, con);
+    }
+    else
     {
         for (int j = 0; j < i; ++j)
         {
@@ -91,10 +98,6 @@ int main(int argc, char** argv)
             child(pttoch[READ], chtopt[WRITE], i);
         }
     }
-    else
-    {
-        parent(n, con);
-    }
 
     exit(EXIT_SUCCESS);
 }
@@ -115,22 +118,23 @@ void child (int rd, int wd, int num)
     }
 }
 
-void parent (int n, connection* con) //исправь расположение в массивах
+void parent (int n, connection* con)
 {
-    char** bufs = (char**)calloc(n, sizeof(char*));
     for (int i = 0; i < n; ++i)
     {
-        con[i].size = getsize(n, i);
-        bufs[i] = (char*)calloc(1024, sizeof(char));
-        close(con[i].chtopt[WRITE]);
-        close(con[i].pttoch[READ]);
+        int size = getsize(n, i);
+        size *= 1024;
+        con[i].buf = (char*)calloc(size, sizeof(char));
+        con[i].begin = con[i].buf;
+        con[i].end = con[i].begin;
+        size--;
+        con[i].end += size;
+        con[i].cur = con[i].begin;
         fcntl(con[i].pttoch[WRITE], F_SETFL, O_NONBLOCK);
         fcntl(con[i].chtopt[READ], F_SETFL, O_NONBLOCK);
     }
-    close(con[0].pttoch[WRITE]);
 
     int in = 0, out = 0, first_child_dead = 0, child_dead = 0; 
-
     while (1)
     {
         fd_set setr, setw;
@@ -139,7 +143,7 @@ void parent (int n, connection* con) //исправь расположение �
         int max = 0;
         for (int i = 0; i < n; ++i)
         {
-            if (strlen(bufs[i]) == 0) 
+            if (con[i].cur != con[i].end) 
             {
                 FD_SET(con[i].chtopt[READ], &setr);
                 if (con[i].chtopt[READ] > max)
@@ -148,7 +152,7 @@ void parent (int n, connection* con) //исправь расположение �
                 }
             }
 
-            if (i != 0 && strlen(bufs[i - 1]) != 0)
+            if (i != 0 && con[i - 1].cur != con[i - 1].begin)
             {
                 FD_SET(con[i].pttoch[WRITE], &setw);
                 if (con[i].pttoch[WRITE] > max)
@@ -163,7 +167,6 @@ void parent (int n, connection* con) //исправь расположение �
             FD_CLR(con[0].chtopt[READ], &setr);
         }
         
-        //printf("not selected\n");
         if (select(max + 1, &setr, &setw, NULL, NULL) == -1)
         {
             printf("select error\n");
@@ -183,41 +186,49 @@ void parent (int n, connection* con) //исправь расположение �
                 child_dead++;
             }
 
-            if (FD_ISSET(con[i].chtopt[READ], &setr) && con[i].filled == 0)
+            if (FD_ISSET(con[i].chtopt[READ], &setr) && con[i].cur != con[i].end)
             {
                 if (i == 0)
                 {
-                    int tmp = read(con[i].chtopt[READ], bufs[i], 10);
+                    int tmp = read(con[i].chtopt[READ], con[i].cur, 10);
                     in += tmp;
-                    con[i].filled = tmp;
+                    con[i].cur += tmp;
                 }
                 else
                 {
-                    con[i].filled = read(con[i].chtopt[READ], bufs[i], 10);
+                    con[i].cur += read(con[i].chtopt[READ], con[i].cur, 10);
                 }
             }
             
             if (i < n - 1)
             {
-                if (FD_ISSET(con[i + 1].pttoch[WRITE], &setw) && con[i].filled != 0)
+                if (FD_ISSET(con[i + 1].pttoch[WRITE], &setw) && con[i].cur != con[i].begin)
                 {
-                    con[i].filled -= write(con[i + 1].pttoch[WRITE], bufs[i], con[i].filled);
-                    memset(bufs[i], 0, 1024);
+                    int tmp = write(con[i + 1].pttoch[WRITE], con[i].begin, con[i].cur - con[i].begin);
+                    memset(con[i].begin, 0, tmp);
+                    con[i].begin += tmp;
+                    if (con[i].begin == con[i].cur)
+                    {
+                        con[i].begin = con[i].buf;
+                        con[i].cur = con[i].buf;
+                    }
                 }
             }
 
-            if (con[i].filled != 0 && i == n - 1)
+            if (con[i].cur != con[i].begin && i == n - 1)
             {
-                int tmp = write(STDOUT_FILENO, bufs[i], con[i].filled);
+                int tmp = write(STDOUT_FILENO, con[i].begin, con[i].cur - con[i].begin);
                 out += tmp;
-                con[i].filled -= tmp;
-                memset(bufs[i], 0, 1024);
+                memset(con[i].begin, 0, tmp);
+                con[i].begin += tmp;
+                if (con[i].begin == con[i].cur)
+                {
+                    con[i].begin = con[i].buf;
+                    con[i].cur = con[i].buf;
+                }
             }
-            //printf("fiiled is%d\n", con[i].filled);
         }
         
-        //printf("\nin is %d\nout is%d\n", in, out);
-        //sleep(1);
         if ((in == out && first_child_dead == 1) || child_dead > 0)
         {
             exit(EXIT_SUCCESS);
@@ -228,16 +239,17 @@ void parent (int n, connection* con) //исправь расположение �
 int getsize(int n, int i)
 {
     i = n - i - 1;
-	int s = 1;
+	int res = 1;
+
 	while (i > 0)
 	{
-		s *= 3;
-		--i;
-		if (s > 128)
-			break;
+		res *= 3;
+		if (res > 81)
+        {
+			return 81;
+        }
+        i--;
 	}
-	if (s > 128)
-		return 81;
 
-	return s;
+	return res;
 }
