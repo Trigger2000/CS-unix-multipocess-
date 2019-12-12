@@ -1,2 +1,2 @@
 all:
-	gcc proxy.cpp -o proxy
+	g++ proxy.cpp -o proxy
