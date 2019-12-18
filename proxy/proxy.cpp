@@ -23,6 +23,8 @@ struct connection
     char* end;
     char* begin;
     char* buf;
+    int size;
+    int dead = 0;
 };
 
 void child(int rd, int wd, int num);
@@ -104,17 +106,19 @@ int main(int argc, char** argv)
 
 void child (int rd, int wd, int num)
 {
-    char* buf = (char*)calloc(4096, sizeof(char));
+    int size = 81 * 1024;
+    char* buf = (char*)calloc(size, sizeof(char));
     while (1)
     {
-        int amount = read(rd, buf, 4096);
+        int amount = read(rd, buf, 1024);
         if (amount == 0)
         {
             break;
         }
+        //if (num == 2)
+            //sleep(5);
         
         write(wd, buf, amount);
-        memset(buf, 0, 4096);
     }
 }
 
@@ -122,26 +126,25 @@ void parent (int n, connection* con)
 {
     for (int i = 0; i < n; ++i)
     {
-        int size = getsize(n, i);
-        size *= 1024;
-        con[i].buf = (char*)calloc(size, sizeof(char));
+        con[i].size = getsize(n, i);
+        con[i].size *= 1024;
+        con[i].buf = (char*)calloc(con[i].size, sizeof(char));
         con[i].begin = con[i].buf;
         con[i].end = con[i].begin;
-        size--;
-        con[i].end += size;
+        con[i].end += con[i].size;
         con[i].cur = con[i].begin;
         fcntl(con[i].pttoch[WRITE], F_SETFL, O_NONBLOCK);
         fcntl(con[i].chtopt[READ], F_SETFL, O_NONBLOCK);
     }
 
-    int in = 0, out = 0, first_child_dead = 0, child_dead = 0; 
+    int last_dead = -1;
     while (1)
     {
         fd_set setr, setw;
         FD_ZERO(&setr);
         FD_ZERO(&setw);
         int max = 0;
-        for (int i = 0; i < n; ++i)
+        for (int i = last_dead + 1; i < n; ++i)
         {
             if (con[i].cur != con[i].end) 
             {
@@ -161,75 +164,63 @@ void parent (int n, connection* con)
                 }
             }
         }
-
-        if (first_child_dead)
-        {
-            FD_CLR(con[0].chtopt[READ], &setr);
-        }
         
         if (select(max + 1, &setr, &setw, NULL, NULL) == -1)
         {
-            printf("select error\n");
+            printf("Error\n");
             exit(EXIT_FAILURE);
         }
 
-        for (int i = 0; i < n; ++i)
+        for (int i = last_dead + 1; i < n; ++i)
         {
-            int check = read(con[i].chtopt[READ], NULL, 1);
-            if (check == 0 && i == 0)
+            int flag = 0;
+            if (i != 0 && con[i - 1].dead == 1 && con[i - 1].buf == con[i - 1].cur)
             {
-                first_child_dead = 1;
-            }
-
-            if (check == 0 && i != 0)
-            {
-                child_dead++;
+                close(con[i].pttoch[WRITE]);
+                flag = 1;
             }
 
             if (FD_ISSET(con[i].chtopt[READ], &setr) && con[i].cur != con[i].end)
             {
-                if (i == 0)
+                int tmp = read(con[i].chtopt[READ], con[i].cur, con[i].end - con[i].cur);
+                if (tmp == 0)
                 {
-                    int tmp = read(con[i].chtopt[READ], con[i].cur, 10);
-                    in += tmp;
-                    con[i].cur += tmp;
+                    con[i].dead = 1;
+                    last_dead = i;
+                    close(con[i].chtopt[READ]);
+                    continue;
                 }
                 else
                 {
-                    con[i].cur += read(con[i].chtopt[READ], con[i].cur, 10);
+                    con[i].cur += tmp;
                 }
+                
             }
             
-            if (i < n - 1)
+            if (i != 0 && FD_ISSET(con[i].pttoch[WRITE], &setw) && flag == 0 && con[i - 1].cur != con[i - 1].begin)
             {
-                if (FD_ISSET(con[i + 1].pttoch[WRITE], &setw) && con[i].cur != con[i].begin)
+                int tmp = write(con[i].pttoch[WRITE], con[i - 1].begin, con[i - 1].cur - con[i - 1].begin); 
+                con[i - 1].begin += tmp;
+                if (con[i - 1].begin == con[i - 1].cur)
                 {
-                    int tmp = write(con[i + 1].pttoch[WRITE], con[i].begin, con[i].cur - con[i].begin);
-                    memset(con[i].begin, 0, tmp);
-                    con[i].begin += tmp;
-                    if (con[i].begin == con[i].cur)
-                    {
-                        con[i].begin = con[i].buf;
-                        con[i].cur = con[i].buf;
-                    }
-                }
-            }
-
-            if (con[i].cur != con[i].begin && i == n - 1)
-            {
-                int tmp = write(STDOUT_FILENO, con[i].begin, con[i].cur - con[i].begin);
-                out += tmp;
-                memset(con[i].begin, 0, tmp);
-                con[i].begin += tmp;
-                if (con[i].begin == con[i].cur)
-                {
-                    con[i].begin = con[i].buf;
-                    con[i].cur = con[i].buf;
+                    con[i - 1].begin = con[i - 1].buf;
+                    con[i - 1].cur = con[i - 1].buf;
                 }
             }
         }
-        
-        if ((in == out && first_child_dead == 1) || child_dead > 0)
+
+        if (con[n - 1].cur != con[n - 1].begin)
+        {
+            int tmp = write(STDOUT_FILENO, con[n - 1].begin, con[n - 1].cur - con[n - 1].begin);
+            con[n - 1].begin += tmp;
+            if (con[n - 1].begin == con[n - 1].cur)
+            {
+                con[n - 1].begin = con[n - 1].buf;
+                con[n - 1].cur = con[n - 1].buf;
+            }
+        }
+
+        if (last_dead == n - 1 && con[n - 1].cur == con[n - 1].buf)
         {
             exit(EXIT_SUCCESS);
         }
