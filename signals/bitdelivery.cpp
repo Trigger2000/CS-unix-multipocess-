@@ -64,11 +64,18 @@ int main(int argc, char** argv)
     sigaction(SIGHUP, &actmsg, NULL);
 
     pid_t parent_id = getpid();
-    pid_t pid = fork();
+    pid_t pid = fork(); //1 
+
+    /*if (pid != 0)
+    {
+        sleep(1);
+    } */
+
+    //sigprocmask(SIG_BLOCK, &set, &old_set); deadlock
 
     if (pid == 0)
     {
-        prctl(PR_SET_PDEATHSIG, SIGCHLD);
+        prctl(PR_SET_PDEATHSIG, SIGCHLD); //1
 
         if (getppid() != parent_id)
         {
