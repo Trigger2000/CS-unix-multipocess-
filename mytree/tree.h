@@ -14,4 +14,8 @@ struct node
 
 void tree_insert(tree* tree, node* key);
 void tree_delete(tree* tree, node* key);
-node* tree_search(int key);
+node* tree_search(tree* tree, int key);
+node* seach_next(tree* tree, int key);
+node* tree_min(node* root_);
+node* tree_max(node* root_);
+void print(node* root);
