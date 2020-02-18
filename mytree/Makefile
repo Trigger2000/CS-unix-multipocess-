@@ -5,10 +5,10 @@ CFLAGS = -g -O0 -fprofile-arcs -ftest-coverage
 
 all: $(TARGET)
 
-$(TARGET): 1.o 2.o res.o
+$(TARGET): tree.o tests.o
 	gcc *.o -fprofile-arcs -ftest-coverage -o $(TARGET)
 
-$@: $< header.h
+$@: $< tree.h
 	$(cc) $(CFLAGS) $< -c -o $@
 
 clean:

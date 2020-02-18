@@ -1,10 +1,13 @@
 #include "tree.h"
 
-void tree_insert(tree* tree, node* key) //if already exist do nothing
+int tree_insert(tree* tree, int key_)
 {
-    node* prev = nullptr;
+    node* key = (node*)calloc(1, sizeof(node));
+    key->data_ = key_;
+
+    node* prev = NULL;
     node* cur = tree->root_;
-    while (cur != nullptr)
+    while (cur != NULL)
     {
         prev = cur;
         if (key->data_ < cur->data_)
@@ -17,12 +20,12 @@ void tree_insert(tree* tree, node* key) //if already exist do nothing
         }
         else
         {
-            return;
+            return -1;
         }
     }
 
     key->prev_ = prev;
-    if (prev == nullptr)
+    if (prev == NULL)
     {
         tree->root_ = key;
     }
@@ -34,15 +37,17 @@ void tree_insert(tree* tree, node* key) //if already exist do nothing
     {
         prev->right_ = key;
     }
+
+    return 0;
 }
 
-void tree_delete(tree* tree, node* key) //if no exist does nothing
+int tree_delete(tree* tree, int key)
 {
     node* cur = tree->root_;
-    node** prev_pos = nullptr;
-    while (cur->data_ != key->data_ && cur != nullptr)
+    node** prev_pos = NULL;
+    while (cur != NULL && cur->data_ != key)
     {
-        if (key->data_ < cur->data_)
+        if (key < cur->data_)
         {
             prev_pos = &(cur->left_);
             cur = cur->left_;
@@ -54,49 +59,67 @@ void tree_delete(tree* tree, node* key) //if no exist does nothing
         }
     }
 
-    if (cur == nullptr)
+    if (cur == NULL)
     {
-        return;
+        return -1;
     }
 
-    if (cur->left_ == nullptr && cur->right_ == nullptr)
+    if (cur->left_ == NULL && cur->right_ == NULL)
     {
-        *prev_pos = nullptr;
+        *prev_pos = NULL;
         free(cur);
     }
-    else if (cur->left_ != nullptr && cur->right_ == nullptr) //optimize
+    else if (cur->left_ != NULL && cur->right_ == NULL)
     {
         *prev_pos = cur->left_;
         free(cur);
     }
-    else if (cur->left_ == nullptr && cur->right_ != nullptr) //optimize
+    else if (cur->left_ == NULL && cur->right_ != NULL)
     {
         *prev_pos = cur->right_;
         free(cur);
     }
     else
     {
-        node* next = seach_next(tree, key);
+        node* next = search_next(tree, key);
         if (next == cur->right_)
         {
-            prev_pos = next;
+            *prev_pos = next;
+            next->left_ = cur->left_;
             free(cur);
         }
         else
         {
-            next->prev_->left_ = next->right_; //???!!! maybe wrong
-            prev_pos = next;
+            next->prev_->left_ = next->right_;
+            if (prev_pos != NULL)
+            {
+                *prev_pos = next;
+            }
+            else
+            {
+                tree->root_ = next;
+            }
+
+            next->left_ = cur->left_;
+            next->right_ = cur->right_;
             free(cur);
         }
     }
+
+    return 0;
 }
 
-node* tree_search(tree* tree, int key) //if no exist returns nullptr
+node* tree_search(tree* tree, int key)
 {
     node* cur = tree->root_;
-    while (cur->data_ != key->data_ && cur != nullptr)
+    while (cur != NULL && cur->data_ != key)
     {
-        if (key->data_ < cur->data_)
+        if (cur == NULL)
+        {
+            return NULL;
+        }
+
+        if (key < cur->data_)
         {
             cur = cur->left_;
         }
@@ -109,24 +132,24 @@ node* tree_search(tree* tree, int key) //if no exist returns nullptr
     return cur;
 }
 
-node* seach_next(tree* tree, int key) //if no key returns nullptr
+node* search_next(tree* tree, int key)
 {
     node* cur = tree_search(tree, key);
-    if (cur == nullptr)
+    if (cur == NULL)
     {
-        return nullptr;
+        return NULL;
     }
 
-    if (cur->right_ != nullptr)
+    if (cur->right_ != NULL)
     {
-        return tree_min(cur->right_)
+        return tree_min(cur->right_);
     }
 
     node* prev = cur->prev_;
-    while (prev != nullptr && cur == prev.right_)
+    while (prev != NULL && cur == prev->right_)
     {
         cur = prev;
-        prev = prev.prev_;
+        prev = prev->prev_;
     }
 
     return prev;
@@ -134,8 +157,13 @@ node* seach_next(tree* tree, int key) //if no key returns nullptr
 
 node* tree_min(node* root)
 {
+    if (root == NULL)
+    {
+        return NULL;
+    }
+
     node* cur = root;
-    while (cur->left_ != nullptr)
+    while (cur->left_ != NULL)
     {
         cur = cur->left_;
     }
@@ -145,8 +173,13 @@ node* tree_min(node* root)
 
 node* tree_max(node* root)
 {
+    if (root == NULL)
+    {
+        return NULL;
+    }
+
     node* cur = root;
-    while (cur->right_ != nullptr)
+    while (cur->right_ != NULL)
     {
         cur = cur->right_;
     }
@@ -157,10 +190,30 @@ node* tree_max(node* root)
 void print(node* root)
 {
     node* cur = root;
-    if (cur != nullptr)
+    if (cur != NULL)
     {
         print(cur->left_);
         printf("%d ", cur->data_);
         print(cur->right_);
+    }
+}
+
+void tree_destroy(node* root)
+{
+    if (root->left_ != NULL)
+    {
+        tree_destroy(root->left_);
+        root->left_ = NULL;
+    }
+
+    if (root->right_ != NULL)
+    {
+        tree_destroy(root-> right_);
+        root->right_ = NULL;
+    }
+
+    if ((root->right_ = NULL) && (root->left_ = NULL))
+    {
+        free(root);
     }
 }
