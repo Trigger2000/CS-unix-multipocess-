@@ -1,5 +1,25 @@
 #include "tree.h"
 
+struct node
+{
+    struct node* prev_;
+    struct node* left_;
+    struct node* right_;
+    int data_;
+};
+
+struct tree
+{
+    struct node* root_;
+};
+
+tree* new_tree()
+{
+    tree* new = (tree*)calloc(1, sizeof(tree));
+    new->root_ = NULL;
+    return new;
+}
+
 int tree_insert(tree* tree, int key_)
 {
     node* key = (node*)calloc(1, sizeof(node));
@@ -142,7 +162,7 @@ node* search_next(tree* tree, int key)
 
     if (cur->right_ != NULL)
     {
-        return tree_min(cur->right_);
+        return tree_min_private(cur->right_);
     }
 
     node* prev = cur->prev_;
@@ -155,7 +175,12 @@ node* search_next(tree* tree, int key)
     return prev;
 }
 
-node* tree_min(node* root)
+node* tree_min(tree* tree)
+{
+    return tree_min_private(tree->root_);
+}
+
+node* tree_min_private(node* root)
 {
     if (root == NULL)
     {
@@ -171,7 +196,12 @@ node* tree_min(node* root)
     return cur;
 }
 
-node* tree_max(node* root)
+node* tree_max(tree* tree)
+{
+    return tree_max_private(tree->root_);
+}
+
+node* tree_max_private(node* root)
 {
     if (root == NULL)
     {
@@ -187,28 +217,38 @@ node* tree_max(node* root)
     return cur;
 }
 
-void print(node* root)
+void print(tree* tree)
+{
+    print_private(tree->root_);
+}
+
+void print_private(node* root)
 {
     node* cur = root;
     if (cur != NULL)
     {
-        print(cur->left_);
+        print_private(cur->left_);
         printf("%d ", cur->data_);
-        print(cur->right_);
+        print_private(cur->right_);
     }
 }
 
-void tree_destroy(node* root)
+void tree_destroy(tree* tree)
+{
+    tree_destroy_private(tree->root_);
+}
+
+void tree_destroy_private(node* root)
 {
     if (root->left_ != NULL)
     {
-        tree_destroy(root->left_);
+        tree_destroy_private(root->left_);
         root->left_ = NULL;
     }
 
     if (root->right_ != NULL)
     {
-        tree_destroy(root-> right_);
+        tree_destroy_private(root-> right_);
         root->right_ = NULL;
     }
 
