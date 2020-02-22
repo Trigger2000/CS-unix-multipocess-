@@ -2,7 +2,7 @@
 
 void test_insert(tree* tree);
 void test_search(tree* tree);
-//void test_min_max(tree* tree);
+void test_min_max(tree* tree);
 void test_search_next(tree* tree);
 //void test_delete(tree* tree);
 
@@ -11,7 +11,7 @@ int main()
     tree* example = new_tree();
     test_insert(example);
     test_search(example);
-    //test_min_max(example);
+    test_min_max(example);
     test_search_next(example);
     //test_delete(&example);
 
@@ -21,20 +21,21 @@ int main()
 
 void test_insert(tree* tree)
 {
-    tree_insert(tree, 7);
-    tree_insert(tree, 3);
-    tree_insert(tree, 5);
-    tree_insert(tree, -2);
-    tree_insert(tree, 0);
-    tree_insert(tree, 2);
-    tree_insert(tree, 3);
-    tree_insert(tree, 15);
-    tree_insert(tree, 13);
-    tree_insert(tree, 17);
-    tree_insert(tree, 13);
-    tree_insert(tree, -1);
-    tree_insert(tree, 14);
-    tree_insert(tree, 4);
+    node tmp = {'a'};
+    tree_insert(tree, 7, &tmp);
+    tree_insert(tree, 3, &tmp);
+    tree_insert(tree, 5, &tmp);
+    tree_insert(tree, -2, &tmp);
+    tree_insert(tree, 0, &tmp);
+    tree_insert(tree, 2, &tmp);
+    tree_insert(tree, 3, &tmp);
+    tree_insert(tree, 15, &tmp);
+    tree_insert(tree, 13, &tmp);
+    tree_insert(tree, 17, &tmp);
+    tree_insert(tree, 13, &tmp);
+    tree_insert(tree, -1, &tmp);
+    tree_insert(tree, 14, &tmp);
+    tree_insert(tree, 4, &tmp);
     print(tree);
     printf("\n");
 }
@@ -53,26 +54,23 @@ void test_search(tree* tree)
     assert(node5 == NULL);
 }
 
-/*void test_min_max(tree* tree)
+void test_min_max(tree* tree)
 {
-    node* min = tree_min(tree->root_);
-    node* max = tree_max(tree->root_);
-    node* empty1 = tree_min(tree->root_->right_->right_->right_);
-    node* empty2 = tree_max(tree->root_->right_->right_->right_);
-    assert(min->data_ == -2);
-    assert(max->data_ == 17);
-    assert(empty1 == NULL);
-    assert(empty2 == NULL);
-} */
+    int min = tree_min(tree);
+    int max = tree_max(tree);
+    assert(min == -2);
+    assert(max == 17);
+}
 
 void test_search_next(tree* tree)
 {
-    node* node1 = search_next(tree, 25);
-    node* node2 = search_next(tree, -2);
-    node* node3 = search_next(tree, 5);
-    assert(node1 == NULL);
-    //assert(node2->data_ == -1);
-    //assert(node3->data_ == 7);
+    int node1 = search_next(tree, 25);
+    int node2 = search_next(tree, -1);
+    int node3 = search_next(tree, 5);
+    assert(node1 == -1);
+    assert(errno == EINVAL);
+    assert(node2 == 0);
+    assert(node 3 == 7);
 }
 
 /*void test_delete(tree* tree)
