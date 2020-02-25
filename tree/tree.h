@@ -15,6 +15,7 @@ typedef struct tree tree;
 typedef struct private_node private_node;
 typedef struct public_node node;
 
+//Fault injection malloc
 void* mymalloc(int size);
 
 //Creates new tree
@@ -51,6 +52,6 @@ static void print_private(private_node* root);
 void tree_destroy(tree** tree);
 static void tree_destroy_private(private_node* root);
 
-//Apply function func for each tree element. Returns how many functions func were applied
+//Apply function func for each tree element. Returns how many functions func were applied. If tree=NULL returns -1
 int foreach(tree* tree, int(*func)(node* node));
 static int foreach_private(private_node* root, int(*func)(node* node));
