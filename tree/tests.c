@@ -22,6 +22,7 @@ int main()
 
     test_insert(example);
     printf(" %d\n", foreach(example, func));
+    printf(" %d\n", foreach(NULL, func));
     test_search(example);
     test_min_max(example);
     test_search_next(example);

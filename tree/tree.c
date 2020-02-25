@@ -338,6 +338,8 @@ int foreach(tree* tree, int(*func)(node* node))
     {
         return foreach_private(tree->root_, func);
     }
+    
+    return -1;
 }
 
 int foreach_private(private_node* root, int(*func)(node* node))
