@@ -331,3 +331,26 @@ void tree_destroy_private(private_node* root)
     free(root->data_);
     free(root);
 }
+
+int foreach(tree* tree, int(*func)(node* node))
+{
+    if (tree != NULL)
+    {
+        return foreach_private(tree->root_, func);
+    }
+}
+
+int foreach_private(private_node* root, int(*func)(node* node))
+{
+    private_node* cur = root;
+    int result = 0;
+    if (cur != NULL)
+    {
+        result = 1;
+        result += foreach_private(cur->left_, func);
+        func(cur->data_);
+        result += foreach_private(cur->right_, func);
+    }
+
+    return result;
+}

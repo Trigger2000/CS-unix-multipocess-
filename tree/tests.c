@@ -5,6 +5,10 @@ void test_search(tree* tree_);
 void test_min_max(tree* tree_);
 void test_search_next(tree* tree_);
 void test_delete(tree* tree_);
+int func(node* node_)
+{
+    printf("%c", node_->data_);
+}
 
 int main()
 {
@@ -17,6 +21,7 @@ int main()
     tree_destroy(&example2);
 
     test_insert(example);
+    printf(" %d\n", foreach(example, func));
     test_search(example);
     test_min_max(example);
     test_search_next(example);

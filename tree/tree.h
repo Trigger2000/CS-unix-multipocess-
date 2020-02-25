@@ -50,3 +50,7 @@ static void print_private(private_node* root);
 //Deletes tree elements
 void tree_destroy(tree** tree);
 static void tree_destroy_private(private_node* root);
+
+//Apply function func for each tree element. Returns how many functions func were applied
+int foreach(tree* tree, int(*func)(node* node));
+static int foreach_private(private_node* root, int(*func)(node* node));
