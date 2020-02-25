@@ -21,8 +21,9 @@ int main()
     tree_destroy(&example2);
 
     test_insert(example);
-    printf(" %d\n", foreach(example, func));
-    printf(" %d\n", foreach(NULL, func));
+    assert(foreach(example, func) == 13);
+    assert(foreach(NULL, func) == -1);
+    printf("\n");
     test_search(example);
     test_min_max(example);
     test_search_next(example);
