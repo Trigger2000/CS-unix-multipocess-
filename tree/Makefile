@@ -6,13 +6,11 @@ CFLAGS = -g -O0 -fprofile-arcs -ftest-coverage
 all: $(TARGET)
 
 $(TARGET): tree.o tests.o
-	gcc *.o -fprofile-arcs -ftest-coverage -g -o $(TARGET)
+	gcc *.o -fprofile-arcs -ftest-coverage -o $(TARGET)
 
-tree.o: tree.c tree.h
-	gcc $(CFLAGS) tree.c -c -g -o tree.o
-
-tests.o: tests.c
-	gcc $(CFLAGS) tests.c -c -g -o tests.o
+$@: $< tree.h
+	$(cc) $(CFLAGS) $< -c -o $@
 
 clean:
-	rm -rf  $(TARGET) *.o *.d *.gcno *.gcda *.gcov
+	rm -rf $(TARGET) *.o *.info *.gcda *.gcno *.gcov report
+

@@ -14,39 +14,57 @@ struct tree
     struct private_node* root_;
 };
 
+void* mymalloc(int size)
+{
+    static int counter = 0;
+    if (counter % 5 == 3)
+    {
+        counter++;
+        return NULL;
+    }
+
+    counter++;
+    return calloc(1, size);
+}
+
 tree* new_tree()
 {
-    tree* new = (tree*)calloc(1, sizeof(tree));
+    tree* new = (tree*)mymalloc(sizeof(tree));
+    if (new == NULL)
+    {
+        return NULL;
+    }
     new->root_ = NULL;
     return new;
 }
 
 int tree_insert(tree* tree, int key, node* data_node)
 {
-    private_node* new = (private_node*)calloc(1, sizeof(private_node));
-    node* tmp = (node*)calloc(1, sizeof(node));
+    if (tree == NULL)
+        return -1;
+
+    private_node* new = (private_node*)mymalloc(sizeof(private_node));
+    node* tmp = (node*)mymalloc(sizeof(node));
+    if (new == NULL || tmp == NULL)
+    {
+        free(new);
+        free(tmp);
+        return -1;
+    }
     tmp->data_ = data_node->data_;
     new->key_ = key;
     new->data_ = tmp;
 
     private_node* prev = NULL;
-    private_node* cur = tree->root_;
-    while (cur != NULL)
+    private_node** rubish;
+    private_node* cur = tree_search_private(tree, key, &prev, &rubish);
+    if (cur != NULL)
     {
-        prev = cur;
-        if (new->key_ < cur->key_)
-        {
-            cur = cur->left_;
-        }
-        else if (new->key_ > cur->key_)
-        {
-            cur = cur->right_;
-        }
-        else
-        {
-            return -1;
-        }
+        free(new);
+        free(tmp);
+        return -1;
     }
+
 
     new->prev_ = prev;
     if (prev == NULL)
@@ -67,22 +85,12 @@ int tree_insert(tree* tree, int key, node* data_node)
 
 int tree_delete(tree* tree, int key)
 {
-    private_node* cur = tree->root_;
-    private_node** prev_pos = NULL;
-    while (cur != NULL && cur->key_ != key)
-    {
-        if (key < cur->key_)
-        {
-            prev_pos = &(cur->left_);
-            cur = cur->left_;
-        }
-        else
-        {
-            prev_pos = &(cur->right_);
-            cur = cur->right_;
-        }
-    }
+    if (tree == NULL)
+        return -1;
 
+    private_node** prev_pos = NULL;
+    private_node* rubish;
+    private_node* cur = tree_search_private(tree, key, &rubish, &prev_pos);
     if (cur == NULL)
     {
         return -1;
@@ -140,7 +148,12 @@ int tree_delete(tree* tree, int key)
 
 node* tree_search(tree* tree, int key)
 {
-    private_node* result = tree_search_private(tree, key);
+    if (tree == NULL)
+        return NULL;
+
+    private_node* rubish1;
+    private_node** rubish2;
+    private_node* result = tree_search_private(tree, key, &rubish1, &rubish2);
     if (result == NULL)
     {
         return NULL;
@@ -149,22 +162,20 @@ node* tree_search(tree* tree, int key)
     return result->data_;
 }
 
-private_node* tree_search_private(tree* tree, int key)
+private_node* tree_search_private(tree* tree, int key, private_node** prev, private_node*** prev_pos)
 {
     private_node* cur = tree->root_;
     while (cur != NULL && cur->key_ != key)
     {
-        if (cur == NULL)
-        {
-            return NULL;
-        }
-
+        *prev = cur;
         if (key < cur->key_)
         {
+            *prev_pos = &(cur->left_);
             cur = cur->left_;
         }
         else
         {
+            *prev_pos = &(cur->right_);
             cur = cur->right_;
         }
     }
@@ -174,6 +185,9 @@ private_node* tree_search_private(tree* tree, int key)
 
 int search_next(tree* tree, int key)
 {
+    if (tree == NULL)
+        return -1;
+
     private_node* result = search_next_private(tree, key);
     if (result == NULL)
     {
@@ -186,7 +200,9 @@ int search_next(tree* tree, int key)
 
 private_node* search_next_private(tree* tree, int key)
 {
-    private_node* cur = tree_search_private(tree, key);
+    private_node* rubish1;
+    private_node** rubish2;
+    private_node* cur = tree_search_private(tree, key, &rubish1, &rubish2);
     if (cur == NULL)
     {
         return NULL;
@@ -209,6 +225,9 @@ private_node* search_next_private(tree* tree, int key)
 
 int tree_min(tree* tree)
 {
+    if (tree == NULL)
+        return -1;
+
     private_node* result = tree_min_private(tree->root_);
     if (result == NULL)
     {
@@ -237,6 +256,9 @@ private_node* tree_min_private(private_node* root)
 
 int tree_max(tree* tree)
 {
+    if (tree == NULL)
+        return -1;
+
     private_node* result = tree_max_private(tree->root_);
     if (result == NULL)
     {
@@ -265,7 +287,10 @@ private_node* tree_max_private(private_node* root)
 
 void print(tree* tree)
 {
-    print_private(tree->root_);
+    if (tree != NULL)
+    {
+        print_private(tree->root_);
+    }
 }
 
 void print_private(private_node* root)
@@ -279,9 +304,16 @@ void print_private(private_node* root)
     }
 }
 
-void tree_destroy(tree* tree)
+void tree_destroy(tree** tree)
 {
-    tree_destroy_private(tree->root_);
+    if (tree != NULL && (*tree)->root_ != NULL)
+    {
+        tree_destroy_private((*tree)->root_);
+        (*tree)->root_ = NULL;
+    }
+
+    free(*tree);
+    *tree = NULL;
 }
 
 void tree_destroy_private(private_node* root)
@@ -289,17 +321,13 @@ void tree_destroy_private(private_node* root)
     if (root->left_ != NULL)
     {
         tree_destroy_private(root->left_);
-        root->left_ = NULL;
     }
 
     if (root->right_ != NULL)
     {
-        tree_destroy_private(root-> right_);
-        root->right_ = NULL;
+        tree_destroy_private(root->right_);
     }
 
-    if ((root->right_ = NULL) && (root->left_ = NULL))
-    {
-        free(root);
-    }
+    free(root->data_);
+    free(root);
 }
