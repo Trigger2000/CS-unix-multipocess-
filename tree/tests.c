@@ -1,4 +1,5 @@
 #include "tree.h"
+#include <assert.h>
 
 void test_insert(tree* tree_);
 void test_search(tree* tree_);
@@ -85,12 +86,12 @@ void test_min_max(tree* tree_)
 {
     errno = 0;
     tree* tmp = new_tree();
-    assert(tree_min(NULL) == -1);
-    assert(tree_max(NULL) == -1);
-    assert(tree_min(tree_) == -2);
-    assert(tree_max(tree_) == 17);
-    assert(tree_min(tmp) == -1);
-    assert(tree_max(tmp) == -1);
+    assert(tree_min(NULL) == NULL);
+    assert(tree_max(NULL) == NULL);
+    assert(tree_min(tree_) != NULL);
+    assert(tree_max(tree_) != NULL);
+    assert(tree_min(tmp) == NULL);
+    assert(tree_max(tmp) == NULL);
     assert(errno == EINVAL);
 
     if (tmp != NULL)

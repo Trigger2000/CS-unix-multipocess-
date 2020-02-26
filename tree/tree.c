@@ -5,7 +5,7 @@ struct private_node
     private_node* prev_;
     private_node* left_;
     private_node* right_;
-    node* data_;
+    void* data_;
     int key_;
 };
 
@@ -13,6 +13,17 @@ struct tree
 {
     struct private_node* root_;
 };
+
+//Fault injection malloc
+void* mymalloc(int size);
+//prev - parent node, prev_pos - position relatively to parent node
+private_node* tree_search_private(tree* tree, int key, private_node** prev, private_node*** prev_pos);
+private_node* search_next_private(tree* tree, int key);
+private_node* tree_min_private(private_node* root);
+private_node* tree_max_private(private_node* root);
+void print_private(private_node* root);
+void tree_destroy_private(private_node* root);
+int foreach_private(private_node* root, int(*func)(node* node));
 
 void* mymalloc(int size)
 {
@@ -38,22 +49,19 @@ tree* new_tree()
     return new;
 }
 
-int tree_insert(tree* tree, int key, node* data_node)
+int tree_insert(tree* tree, int key, const void* data, int data_size)
 {
     if (tree == NULL)
         return -1;
 
     private_node* new = (private_node*)mymalloc(sizeof(private_node));
-    node* tmp = (node*)mymalloc(sizeof(node));
-    if (new == NULL || tmp == NULL)
+    if (new == NULL)
     {
-        free(new);
-        free(tmp);
         return -1;
     }
-    tmp->data_ = data_node->data_;
     new->key_ = key;
-    new->data_ = tmp;
+    new->data_ = mymalloc(data_size);
+    new->data_ = memcpy(new->data_, data, data_size);
 
     private_node* prev = NULL;
     private_node** rubish;
@@ -99,20 +107,14 @@ int tree_delete(tree* tree, int key)
     if (cur->left_ == NULL && cur->right_ == NULL)
     {
         *prev_pos = NULL;
-        free(cur->data_);
-        free(cur);
     }
     else if (cur->left_ != NULL && cur->right_ == NULL)
     {
         *prev_pos = cur->left_;
-        free(cur->data_);
-        free(cur);
     }
     else if (cur->left_ == NULL && cur->right_ != NULL)
     {
         *prev_pos = cur->right_;
-        free(cur->data_);
-        free(cur);
     }
     else
     {
@@ -121,8 +123,6 @@ int tree_delete(tree* tree, int key)
         {
             *prev_pos = next;
             next->left_ = cur->left_;
-            free(cur->data_);
-            free(cur);
         }
         else
         {
@@ -138,11 +138,11 @@ int tree_delete(tree* tree, int key)
 
             next->left_ = cur->left_;
             next->right_ = cur->right_;
-            free(cur->data_);
-            free(cur);
         }
     }
 
+    free(cur->data_);
+    free(cur);
     return 0;
 }
 
@@ -183,19 +183,19 @@ private_node* tree_search_private(tree* tree, int key, private_node** prev, priv
     return cur;
 }
 
-int search_next(tree* tree, int key)
+node* search_next(tree* tree, int key)
 {
     if (tree == NULL)
-        return -1;
+        return NULL;
 
     private_node* result = search_next_private(tree, key);
     if (result == NULL)
     {
         errno = EINVAL;
-        return -1;
+        return NULL;
     }
 
-    return result->key_;
+    return result->data_;
 }
 
 private_node* search_next_private(tree* tree, int key)
@@ -223,19 +223,19 @@ private_node* search_next_private(tree* tree, int key)
     return prev;
 }
 
-int tree_min(tree* tree)
+node* tree_min(tree* tree)
 {
     if (tree == NULL)
-        return -1;
+        return NULL;
 
     private_node* result = tree_min_private(tree->root_);
     if (result == NULL)
     {
         errno = EINVAL;
-        return -1;
+        return NULL;
     }
 
-    return result->key_;
+    return result->data_;
 }
 
 private_node* tree_min_private(private_node* root)
@@ -254,19 +254,19 @@ private_node* tree_min_private(private_node* root)
     return cur;
 }
 
-int tree_max(tree* tree)
+node* tree_max(tree* tree)
 {
     if (tree == NULL)
-        return -1;
+        return NULL;
 
     private_node* result = tree_max_private(tree->root_);
     if (result == NULL)
     {
         errno = EINVAL;
-        return -1;
+        return NULL;
     }
 
-    return result->key_;
+    return result->data_;
 }
 
 private_node* tree_max_private(private_node* root)
