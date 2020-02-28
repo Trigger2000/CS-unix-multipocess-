@@ -6,7 +6,8 @@
 
 struct public_node
 {
-    char data_;
+    void* data_;
+    const int key_;
 };
 
 struct private_node;
@@ -25,23 +26,17 @@ int tree_insert(tree* tree, int key, const void* data, int data_size);
 //if doesn't exist or tree=NULL return -1 else returns 0
 int tree_delete(tree* tree, int key);
 
-//if no exist or tree=NULL returns NULL
+//if no exist or tree=NULL returns NULL else returns pointer to data
 node* tree_search(tree* tree, int key);
 
-//Finds node's key with min value greater than key. if no exist or tree=NULL returns -1 setting errno EINVAL
-node* search_next(tree* tree, int key);
-
-//Search min tree element. If tree is empty or tree=NULL returns -1 setting errno EINVAL
+//Search min tree node. If tree is empty or tree=NULL returns NULL else returns pointer to data
 node* tree_min(tree* tree);
 
-//Search max tree element. If tree is empty or tree=NULL returns -1 setting errno EINVAL
+//Search max tree node. If tree is empty or tree=NULL returns NULL else returns pointer to data
 node* tree_max(tree* tree);
 
-//Prints tree elements
-void print(tree* tree);
-
 //Deletes all tree elements
-void tree_destroy(tree** tree);
+void tree_destroy(tree* tree);
 
-//Apply function func for each tree element. Returns how many functions func were applied. If tree=NULL returns -1
-int foreach(tree* tree, int(*func)(node* node));
+//Apply function func for each tree element via in-order traverse. Returns -1 if something is incorrect
+int foreach(tree* tree, int(*func)(node* node, void* val), void* par);

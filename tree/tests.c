@@ -1,74 +1,89 @@
 #include "tree.h"
 #include <assert.h>
 
+void test_allocation();
 void test_insert(tree* tree_);
 void test_search(tree* tree_);
 void test_min_max(tree* tree_);
-void test_search_next(tree* tree_);
 void test_delete(tree* tree_);
-int func(node* node_)
+
+int print(node* node, void* val)
 {
-    printf("%c", node_->data_);
+    printf("{%d, %c} ", node->key_, *(char*)(node->data_));
+    return 0;
+}
+
+int fault(node* node, void* val)
+{
+    if (node->key_ != 13)
+    {
+        return 0;
+    }
+    return -1;
 }
 
 int main()
 {
     tree* example = new_tree();
-    tree* example1 = new_tree();
-    tree* example2 = new_tree();
-    tree* broken = new_tree();
-    assert(broken == NULL);
-    tree_destroy(&example1);
-    tree_destroy(&example2);
-
+    test_allocation();
     test_insert(example);
-    assert(foreach(example, func) == 13);
-    assert(foreach(NULL, func) == -1);
-    printf("\n");
     test_search(example);
     test_min_max(example);
-    test_search_next(example);
     test_delete(example);
-    tree_destroy(&example);
-    print(example);
-    printf("\n");
+    tree_destroy(example);
 
     return 0;
 }
 
+void test_allocation()
+{
+    tree* ex1 = new_tree();
+    tree* ex2 = new_tree();
+    tree* ex3 = new_tree();
+    tree* ex4 = new_tree();
+    tree* ex5 = new_tree();
+    tree_destroy(ex1);
+    tree_destroy(ex2);
+    tree_destroy(ex3);
+    tree_destroy(ex4);
+    tree_destroy(ex5);
+    foreach(NULL, print, NULL);
+}
+
 void test_insert(tree* tree_)
 {
-    node tmp = {'a'};
-    tree_insert(NULL, 7, &tmp);
-    tree_insert(tree_, 7, &tmp);
-    tree_insert(tree_, 7, &tmp);
-    tree_insert(tree_, 3, &tmp);
-    tree_insert(tree_, 3, &tmp);
-    tree_insert(tree_, 5, &tmp);
-    tree_insert(tree_, 5, &tmp);
-    tree_insert(tree_, -2, &tmp);
-    tree_insert(tree_, -2, &tmp);
-    tree_insert(tree_, 0, &tmp);
-    tree_insert(tree_, 0, &tmp);
-    tree_insert(tree_, 2, &tmp);
-    tree_insert(tree_, 2, &tmp);
-    tree_insert(tree_, 3, &tmp);
-    tree_insert(tree_, 15, &tmp);
-    tree_insert(tree_, 15, &tmp);
-    tree_insert(tree_, 13, &tmp);
-    tree_insert(tree_, 13, &tmp);
-    tree_insert(tree_, 17, &tmp);
-    tree_insert(tree_, 17, &tmp);
-    tree_insert(tree_, 13, &tmp);
-    tree_insert(tree_, -1, &tmp);
-    tree_insert(tree_, -1, &tmp);
-    tree_insert(tree_, 14, &tmp);
-    tree_insert(tree_, 14, &tmp);
-    tree_insert(tree_, 4, &tmp);
-    tree_insert(tree_, 4, &tmp);
-    tree_insert(tree_, 16, &tmp);
-    tree_insert(tree_, 16, &tmp);
-    print(tree_);
+    char tmp = 'a';
+    tree_insert(NULL, 7, &tmp, sizeof(tmp));
+    tree_insert(tree_, 7, &tmp, sizeof(tmp));
+    tree_insert(tree_, 7, &tmp, sizeof(tmp));
+    tree_insert(tree_, 3, &tmp, sizeof(tmp));
+    tree_insert(tree_, 3, &tmp, sizeof(tmp));
+    tree_insert(tree_, 5, &tmp, sizeof(tmp));
+    tree_insert(tree_, 5, &tmp, sizeof(tmp));
+    tree_insert(tree_, -2, &tmp, sizeof(tmp));
+    tree_insert(tree_, -2, &tmp, sizeof(tmp));
+    tree_insert(tree_, 0, &tmp, sizeof(tmp));
+    tree_insert(tree_, 0, &tmp, sizeof(tmp));
+    tree_insert(tree_, 2, &tmp, sizeof(tmp));
+    tree_insert(tree_, 2, &tmp, sizeof(tmp));
+    tree_insert(tree_, 3, &tmp, sizeof(tmp));
+    tree_insert(tree_, 15, &tmp, sizeof(tmp));
+    tree_insert(tree_, 15, &tmp, sizeof(tmp));
+    tree_insert(tree_, 13, &tmp, sizeof(tmp));
+    tree_insert(tree_, 13, &tmp, sizeof(tmp));
+    tree_insert(tree_, 17, &tmp, sizeof(tmp));
+    tree_insert(tree_, 17, &tmp, sizeof(tmp));
+    tree_insert(tree_, 13, &tmp, sizeof(tmp));
+    tree_insert(tree_, -1, &tmp, sizeof(tmp));
+    tree_insert(tree_, -1, &tmp, sizeof(tmp));
+    tree_insert(tree_, 14, &tmp, sizeof(tmp));
+    tree_insert(tree_, 14, &tmp, sizeof(tmp));
+    tree_insert(tree_, 4, &tmp, sizeof(tmp));
+    tree_insert(tree_, 4, &tmp, sizeof(tmp));
+    tree_insert(tree_, 16, &tmp, sizeof(tmp));
+    tree_insert(tree_, 16, &tmp, sizeof(tmp));
+    foreach(tree_, print, NULL);
+    foreach(tree_, fault, NULL);
     printf("\n");
 }
 
@@ -84,29 +99,14 @@ void test_search(tree* tree_)
 
 void test_min_max(tree* tree_)
 {
-    errno = 0;
     tree* tmp = new_tree();
     assert(tree_min(NULL) == NULL);
     assert(tree_max(NULL) == NULL);
-    assert(tree_min(tree_) != NULL);
-    assert(tree_max(tree_) != NULL);
+    assert(tree_min(tree_)->key_ == -2);
+    assert(tree_max(tree_)->key_ == 17);
     assert(tree_min(tmp) == NULL);
     assert(tree_max(tmp) == NULL);
-    assert(errno == EINVAL);
-
-    if (tmp != NULL)
-        tree_destroy(&tmp);
-}
-
-void test_search_next(tree* tree_)
-{
-    errno = 0;
-    assert(search_next(NULL, 0) == -1);
-    assert(search_next(tree_, 25) == -1);
-    assert(search_next(tree_, -1) == 0);
-    assert(search_next(tree_, 5) == 7);
-    assert(search_next(tree_, 3) == 4);
-    assert(errno == EINVAL);
+    tree_destroy(tmp);
 }
 
 void test_delete(tree* tree_)
@@ -114,53 +114,53 @@ void test_delete(tree* tree_)
     assert(tree_delete(NULL, 25) == -1);
     assert(tree_delete(tree_, 25) == -1);
 
-    node tmp = {'a'};
+    char tmp = 'a';
     tree_delete(tree_, 14);
     printf("no 14 ");
-    print(tree_);
+    foreach(tree_, print, NULL);
     printf("\n");
-    tree_insert(tree_, 14, &tmp);
-    tree_insert(tree_, 14, &tmp);
+    tree_insert(tree_, 14, &tmp, sizeof(tmp));
+    tree_insert(tree_, 14, &tmp, sizeof(tmp));
 
     tree_delete(tree_, 3);
     printf("no 3 ");
-    print(tree_);
+    foreach(tree_, print, NULL);
     printf("\n");
-    tree_insert(tree_, 3, &tmp);
-    tree_insert(tree_, 3, &tmp);
+    tree_insert(tree_, 3, &tmp, sizeof(tmp));
+    tree_insert(tree_, 3, &tmp, sizeof(tmp));
 
     tree_delete(tree_, 13);
     printf("no 13 ");
-    print(tree_);
+    foreach(tree_, print, NULL);
     printf("\n");
-    tree_insert(tree_, 13, &tmp);
-    tree_insert(tree_, 13, &tmp);
+    tree_insert(tree_, 13, &tmp, sizeof(tmp));
+    tree_insert(tree_, 13, &tmp, sizeof(tmp));
 
     tree_delete(tree_, 5);
     printf("no 5 ");
-    print(tree_);
+    foreach(tree_, print, NULL);
     printf("\n");
-    tree_insert(tree_, 5, &tmp);
-    tree_insert(tree_, 5, &tmp);
+    tree_insert(tree_, 5, &tmp, sizeof(tmp));
+    tree_insert(tree_, 5, &tmp, sizeof(tmp));
 
     tree_delete(tree_, 17);
     printf("no 17 ");
-    print(tree_);
+    foreach(tree_, print, NULL);
     printf("\n");
-    tree_insert(tree_, 17, &tmp);
-    tree_insert(tree_, 17, &tmp);
+    tree_insert(tree_, 17, &tmp, sizeof(tmp));
+    tree_insert(tree_, 17, &tmp, sizeof(tmp));
 
     tree_delete(tree_, 15);
     printf("no 15 ");
-    print(tree_);
+    foreach(tree_, print, NULL);
     printf("\n");
-    tree_insert(tree_, 15, &tmp);
-    tree_insert(tree_, 15, &tmp);
+    tree_insert(tree_, 15, &tmp, sizeof(tmp));
+    tree_insert(tree_, 15, &tmp, sizeof(tmp));
 
     tree_delete(tree_, 7);
     printf("no 7 ");
-    print(tree_);
+    foreach(tree_, print, NULL);
     printf("\n");
-    tree_insert(tree_, 7, &tmp);
-    tree_insert(tree_, 7, &tmp);
+    tree_insert(tree_, 7, &tmp, sizeof(tmp));
+    tree_insert(tree_, 7, &tmp, sizeof(tmp));
 }
