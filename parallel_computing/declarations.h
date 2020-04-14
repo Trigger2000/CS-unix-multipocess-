@@ -10,7 +10,7 @@
 #define func(x) ((x)*(x))
 #define INTEGRATION_STEP 0.000001
 #define BEGIN 0
-#define END 10000
+#define END 2000
 
 struct thread_info
 {
