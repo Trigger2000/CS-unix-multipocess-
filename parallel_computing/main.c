@@ -10,7 +10,7 @@ int main(int argc, char** argv)
 
     int threads_requested = strtol(argv[1], NULL, 10);
     int cpu_cores = getcpuinfo();
-    printf("%lf\n", calculate(cpu_cores, threads_requested));
+    calculate(cpu_cores, threads_requested);
 
     return 0;
 }
