@@ -4,10 +4,10 @@ double* arr;
 
 double calculate(int cpu_cores, int threads_requested)
 {
-    cpu_set_t cpu0;
+    /*cpu_set_t cpu0;
     CPU_ZERO(&cpu0);
     CPU_SET(0, &cpu0);
-    pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpu0);
+    pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpu0); */
 
     double diff = (END - BEGIN) / threads_requested;
     double cur = diff;
@@ -29,6 +29,12 @@ double calculate(int cpu_cores, int threads_requested)
         pthread_create(&threads[i], attr, &integrate, &info[i]);
         cur += diff;
     }
+
+    /*cpu_set_t cpu0;
+    CPU_ZERO(&cpu0);
+    CPU_SET(0, &cpu0);
+    pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpu0); */
+    
     thread_info first = {BEGIN, diff, 0};
     integrate(&first);
 
