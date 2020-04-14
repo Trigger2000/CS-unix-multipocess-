@@ -4,11 +4,12 @@ double* arr;
 
 double calculate(int cpu_cores, int threads_requested)
 {
-    if (threads_requested > cpu_cores * 2)
+    if (threads_requested > cpu_cores*2)
     {
-        threads_requested = cpu_cores * 2;
+        threads_requested = cpu_cores*2;
+        printf("Too many threads requested, working on %d threads\n", cpu_cores*2);
     }
-    
+
     double diff = (END - BEGIN) / threads_requested;
     double cur = diff;
     arr = (double*)calloc(threads_requested, 64);
