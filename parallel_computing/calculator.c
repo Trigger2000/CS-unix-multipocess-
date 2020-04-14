@@ -4,36 +4,28 @@ double* arr;
 
 double calculate(int cpu_cores, int threads_requested)
 {
-    /*cpu_set_t cpu0;
-    CPU_ZERO(&cpu0);
-    CPU_SET(0, &cpu0);
-    pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpu0); */
-
     double diff = (END - BEGIN) / threads_requested;
     double cur = diff;
     arr = (double*)calloc(threads_requested, 64);
     pthread_t* threads = (pthread_t*)calloc(threads_requested, sizeof(pthread_t));
     thread_info* info = (thread_info*)calloc(threads_requested, 64);
 
+    cpu_set_t cpui;
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
     for (int i = 1; i < threads_requested; ++i)
     {
-        cpu_set_t* cpui = (cpu_set_t*)calloc(1, sizeof(cpu_set_t));
-        CPU_ZERO(cpui);
-        CPU_SET(i % cpu_cores, cpui);
-        pthread_attr_t* attr = (pthread_attr_t*)calloc(1, sizeof(cpu_set_t));
-        pthread_attr_setaffinity_np(attr, sizeof(cpu_set_t), cpui);
+        CPU_ZERO(&cpui);
+        CPU_SET(i % cpu_cores, &cpui);
+        pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpui);
 
         info[i].begin = cur;
         info[i].end = cur + diff;
         info[i].num = i;
-        pthread_create(&threads[i], attr, &integrate, &info[i]);
+        pthread_create(&threads[i], &attr, &integrate, &info[i]);
         cur += diff;
     }
-
-    /*cpu_set_t cpu0;
-    CPU_ZERO(&cpu0);
-    CPU_SET(0, &cpu0);
-    pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpu0); */
+    pthread_attr_destroy(&attr);
     
     thread_info first = {BEGIN, diff, 0};
     integrate(&first);
