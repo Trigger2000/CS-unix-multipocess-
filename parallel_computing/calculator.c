@@ -5,12 +5,12 @@ double diff = 0;
 
 double calculate(int cpu_cores, int threads_requested)
 {
-    /*cpu_set_t cpui;
+    cpu_set_t cpui;
     pthread_attr_t attr;
     pthread_attr_init(&attr);
     CPU_ZERO(&cpui);
     CPU_SET(0, &cpui);
-    pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpui); */
+    pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpui);
 
     diff = (END - BEGIN) / ((double)threads_requested);
     int size = threads_requested > cpu_cores * 2? threads_requested : cpu_cores * 2;
@@ -21,13 +21,13 @@ double calculate(int cpu_cores, int threads_requested)
     int i = 1;
     for (i = 1; i < threads_requested; ++i)
     {
-        /*pthread_attr_destroy(&attr);
+        pthread_attr_destroy(&attr);
         pthread_attr_init(&attr);
         CPU_ZERO(&cpui);
         CPU_SET(i % (cpu_cores * 2), &cpui);
-        pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpui); */
+        pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpui);
         data[i] = i;
-        int a = pthread_create(&threads[i], NULL, &integrate, &data[i]);
+        int a = pthread_create(&threads[i], &attr, &integrate, &data[i]);
         if (a != 0)
         {
             printf("Can't create thread %d\n", i);
@@ -37,19 +37,19 @@ double calculate(int cpu_cores, int threads_requested)
 
     for (i = threads_requested; i < cpu_cores * 2; ++i)
     {
-        /*pthread_attr_destroy(&attr);
+        pthread_attr_destroy(&attr);
         pthread_attr_init(&attr);
         CPU_ZERO(&cpui);
         CPU_SET(i % (cpu_cores * 2), &cpui);
-        pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpui); */
-        int a = pthread_create(&threads[i], NULL, &load, NULL);
+        pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpui);
+        int a = pthread_create(&threads[i], &attr, &load, NULL);
         if (a != 0)
         {
             printf("Can't create thread %d\n", i);
             break;
         }
     }
-    //pthread_attr_destroy(&attr);
+    pthread_attr_destroy(&attr);
     
     int tmp = 0;
     integrate(&tmp);
