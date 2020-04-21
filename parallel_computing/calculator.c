@@ -1,59 +1,94 @@
 #include "declarations.h"
 
 double* arr;
+double diff = 0;
 
 double calculate(int cpu_cores, int threads_requested)
 {
-
-    double diff = (END - BEGIN) / threads_requested;
-    double cur = diff;
-    arr = (double*)calloc(threads_requested, 64);
-    pthread_t* threads = (pthread_t*)calloc(threads_requested, sizeof(pthread_t));
-    thread_info* info = (thread_info*)calloc(threads_requested, 64);
-
-    cpu_set_t cpui;
+    /*cpu_set_t cpui;
     pthread_attr_t attr;
     pthread_attr_init(&attr);
-    for (int i = 1; i < threads_requested; ++i)
-    {
-        CPU_ZERO(&cpui);
-        CPU_SET(i % cpu_cores, &cpui);
-        pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpui);
+    CPU_ZERO(&cpui);
+    CPU_SET(0, &cpui);
+    pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpui); */
 
-        info[i].begin = cur;
-        info[i].end = cur + diff;
-        info[i].num = i;
-        pthread_create(&threads[i], &attr, &integrate, &info[i]);
-        cur += diff;
+    diff = (END - BEGIN) / ((double)threads_requested);
+    int size = threads_requested > cpu_cores * 2? threads_requested : cpu_cores * 2;
+    arr = (double*)calloc(threads_requested, 64);
+    pthread_t* threads = (pthread_t*)calloc(size, sizeof(pthread_t));
+    int* data = (int*)calloc(threads_requested, sizeof(int));
+
+    int i = 1;
+    for (i = 1; i < threads_requested; ++i)
+    {
+        /*pthread_attr_destroy(&attr);
+        pthread_attr_init(&attr);
+        CPU_ZERO(&cpui);
+        CPU_SET(i % (cpu_cores * 2), &cpui);
+        pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpui); */
+        data[i] = i;
+        int a = pthread_create(&threads[i], NULL, &integrate, &data[i]);
+        if (a != 0)
+        {
+            printf("Can't create thread %d\n", i);
+        }
     }
-    pthread_attr_destroy(&attr);
+
+    for (i = threads_requested; i < cpu_cores * 2; ++i)
+    {
+        /*pthread_attr_destroy(&attr);
+        pthread_attr_init(&attr);
+        CPU_ZERO(&cpui);
+        CPU_SET(i % (cpu_cores * 2), &cpui);
+        pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpui); */
+        int a = pthread_create(&threads[i], NULL, &load, NULL);
+        if (a != 0)
+        {
+            printf("Can't create thread %d\n", i);
+        }
+    }
+    //pthread_attr_destroy(&attr);
     
-    thread_info first = {BEGIN, diff, 0};
-    integrate(&first);
+    int tmp = 0;
+    integrate(&tmp);
 
     double result = arr[0];
-    for (int i = 1; i < threads_requested; ++i)
+    i = 1;
+    for (i = 1; i < threads_requested; ++i)
     {
         pthread_join(threads[i], NULL);
         result += arr[i];
     }
+
+    for (i = threads_requested; i < cpu_cores * 2; ++i)
+    {
+        pthread_cancel(threads[i]);
+    }
+
     free(arr);
     free(threads);
+    free(data);
 
     return result;
 }
 
 void* integrate(void* arg)
 {
-    thread_info* tmp = (thread_info*)arg;
-    double cur = tmp->begin;
+    int number = *((int*)arg);
+    double cur = BEGIN + number * diff;
+    double end = BEGIN + (number + 1) * diff;
     double val = 0.0;
-    while (cur < tmp->end)
+    while (cur < end)
     {
         val += func(cur) * INTEGRATION_STEP;
         cur += INTEGRATION_STEP;
     }
-    arr[tmp->num] = val;
+    arr[number] = val;
 
     return NULL;
+}
+
+void* load(void* arg)
+{
+    while (1);
 }

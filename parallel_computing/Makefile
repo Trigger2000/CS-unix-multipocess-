@@ -1,5 +1,5 @@
 TARGET = a.out
-CFLAGS = -pthread -O0
+CFLAGS = -std=c99 -pthread -O0
 
 .PHONY: all clean
 

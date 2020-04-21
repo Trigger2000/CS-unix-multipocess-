@@ -10,7 +10,13 @@ int main(int argc, char** argv)
 
     int threads_requested = strtol(argv[1], NULL, 10);
     int cpu_cores = getcpuinfo();
-    calculate(cpu_cores, threads_requested);
+
+    if (threads_requested > cpu_cores * 2)
+    {
+        printf("Attention! Requested more threads than cpu has!\n");
+    }
+
+    printf("%lf\n", calculate(cpu_cores, threads_requested));
 
     return 0;
 }
