@@ -31,6 +31,7 @@ double calculate(int cpu_cores, int threads_requested)
         if (a != 0)
         {
             printf("Can't create thread %d\n", i);
+            break;
         }
     }
 
@@ -45,6 +46,7 @@ double calculate(int cpu_cores, int threads_requested)
         if (a != 0)
         {
             printf("Can't create thread %d\n", i);
+            break;
         }
     }
     //pthread_attr_destroy(&attr);
@@ -56,13 +58,23 @@ double calculate(int cpu_cores, int threads_requested)
     i = 1;
     for (i = 1; i < threads_requested; ++i)
     {
-        pthread_join(threads[i], NULL);
+        int a = pthread_join(threads[i], NULL);
+        if (a != 0)
+        {
+            printf("Can't join thread %d\n", i);
+            break;
+        }
         result += arr[i];
     }
 
     for (i = threads_requested; i < cpu_cores * 2; ++i)
     {
-        pthread_cancel(threads[i]);
+        int a = pthread_cancel(threads[i]);
+        if (a != 0)
+        {
+            printf("Can't cancel thread %d\n", i);
+            break;
+        }
     }
 
     free(arr);
