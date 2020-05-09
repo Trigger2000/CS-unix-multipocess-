@@ -13,7 +13,7 @@ double calculate(int cpu_cores, int threads_requested)
     pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpui);
 
     diff = (END - BEGIN) / ((double)threads_requested);
-    int size = threads_requested > cpu_cores * 2? threads_requested : cpu_cores * 2;
+    int size = threads_requested > cpu_cores * 2 ? threads_requested : cpu_cores * 2;
     arr = (double*)calloc(threads_requested, 64);
     pthread_t* threads = (pthread_t*)calloc(size, sizeof(pthread_t));
     int* data = (int*)calloc(threads_requested, sizeof(int));
