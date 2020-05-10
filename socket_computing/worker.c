@@ -23,6 +23,7 @@ int main()
     struct sockaddr_in6 info;
     memset(&info, 0, sizeof(struct sockaddr_in6));
     info.sin6_family = AF_INET6;
+    info.sin6_addr = in6addr_any;
     info.sin6_port = htons(PORT_NUM);
 
     char msg[6] = "ready";
