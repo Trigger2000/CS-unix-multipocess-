@@ -1,18 +1,10 @@
-TARGET1 = server
-TARGET2 = worker
-
 .PHONY: all clean
 
-all: $(TARGET1) $(TARGET2)
-
-$(TARGET1): server.o
-	gcc server.o -o $(TARGET1)
-
-$(TARGET2): worker.o
-	gcc worker.o -o $(TARGET2)
-
-$@: $<
-	$(cc) $< -c -o $@
+all:
+	gcc server.c -o server
+	gcc worker.c -o worker
+	gcc tmp_server.c -o tmp_server
+	gcc tmp_client.c -o tmp_client
 
 clean:
-	rm -rf $(TARGET1) $(TARGET2) *.o
+	rm -rf server worker tmp_server tmp_client

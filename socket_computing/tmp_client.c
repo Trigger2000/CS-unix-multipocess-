@@ -1,50 +1,61 @@
-// Client side implementation of UDP client-server model 
-#include <stdio.h> 
-#include <stdlib.h> 
-#include <unistd.h> 
-#include <string.h> 
-#include <sys/types.h> 
-#include <sys/socket.h> 
-#include <arpa/inet.h> 
-#include <netinet/in.h> 
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <errno.h>
+#include <arpa/inet.h>
 
-#define PORT	 8080 
-#define MAXLINE 1024 
+int main(int argc, char *argv[]) {
+    int sockfd = 0, n = 0;
+    char recvBuff[1024];
+    struct sockaddr_in serv_addr;
 
-// Driver code 
-int main() { 
-	int sockfd; 
-	char buffer[MAXLINE]; 
-	char *hello = "Hello from client"; 
-	struct sockaddr_in	 servaddr; 
+    if(argc != 2) {
+        printf("\n Usage: %s <ip of server> \n",argv[0]);
+        return 1;
+    }
 
-	// Creating socket file descriptor 
-	if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) { 
-		perror("socket creation failed"); 
-		exit(EXIT_FAILURE); 
-	} 
+    memset(recvBuff, '0',sizeof(recvBuff));
+    if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+    {
+        printf("\n Error : Could not create socket \n");
+        return 1;
+    }
 
-	memset(&servaddr, 0, sizeof(servaddr)); 
-	
-	// Filling server information 
-	servaddr.sin_family = AF_INET; 
-	servaddr.sin_port = htons(PORT); 
-	servaddr.sin_addr.s_addr = htonl(INADDR_ANY); 
-	
-	int n, len; 
-	
-	sendto(sockfd, (const char *)hello, strlen(hello), 
-		MSG_CONFIRM, (const struct sockaddr *) &servaddr, 
-			sizeof(servaddr)); 
-	printf("Hello message sent.\n"); 
-		
-	n = recvfrom(sockfd, (char *)buffer, MAXLINE, 
-				MSG_WAITALL, (struct sockaddr *) &servaddr, 
-				&len); 
-	buffer[n] = '\0'; 
-	printf("Server : %s\n", buffer); 
+    memset(&serv_addr, '0', sizeof(serv_addr));
 
-	close(sockfd); 
-	return 0; 
-} 
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(5000);
 
+    if(inet_pton(AF_INET, argv[1], &serv_addr.sin_addr)<=0)
+    {
+        printf("\n inet_pton error occured\n");
+        return 1;
+    }
+
+    if( connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
+    {
+       printf("\n Error : Connect Failed \n");
+       return 1;
+    }
+
+    while ( (n = read(sockfd, recvBuff, sizeof(recvBuff)-1)) > 0)
+    {
+        recvBuff[n] = 0;
+        if(fputs(recvBuff, stdout) == EOF)
+        {
+            printf("\n Error : Fputs error\n");
+        }
+    }
+
+    if(n < 0)
+    {
+        printf("\n Read error \n");
+    }
+
+    return 0;
+}
