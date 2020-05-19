@@ -1,61 +1,48 @@
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <netinet/in.h>
-#include <netdb.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <errno.h>
-#include <arpa/inet.h>
+#include <stdio.h>      /* for printf() and fprintf() */
+#include <sys/socket.h> /* for socket(), connect(), sendto(), and recvfrom() */
+#include <arpa/inet.h>  /* for sockaddr_in and inet_addr() */
+#include <stdlib.h>     /* for atoi() and exit() */
+#include <string.h>     /* for memset() */
+#include <unistd.h>     /* for close() */
 
-int main(int argc, char *argv[]) {
-    int sockfd = 0, n = 0;
-    char recvBuff[1024];
-    struct sockaddr_in serv_addr;
+#define MAXRECVSTRING 255  /* Longest string to receive */
 
-    if(argc != 2) {
-        printf("\n Usage: %s <ip of server> \n",argv[0]);
-        return 1;
-    }
+void DieWithError(char *errorMessage);  /* External error handling function */
 
-    memset(recvBuff, '0',sizeof(recvBuff));
-    if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
-    {
-        printf("\n Error : Could not create socket \n");
-        return 1;
-    }
+int main(int argc, char *argv[])
+{
+    int sock;                         /* Socket */
+    struct sockaddr_in broadcastAddr; /* Broadcast Address */    /* Port */
+    char recvString[MAXRECVSTRING+1]; /* Buffer for received string */
+    int recvStringLen;                /* Length of received string */
 
-    memset(&serv_addr, '0', sizeof(serv_addr));
+    /* Create a best-effort datagram socket using UDP */
+    if ((sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0)
+        DieWithError("socket() failed");
 
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_port = htons(5000);
+    /* Construct bind structure */
+    memset(&broadcastAddr, 0, sizeof(broadcastAddr));   /* Zero out structure */
+    broadcastAddr.sin_family = AF_INET;                 /* Internet address family */
+    broadcastAddr.sin_addr.s_addr = htonl(INADDR_ANY);  /* Any incoming interface */
+    broadcastAddr.sin_port = htons(5000);      /* Broadcast port */
 
-    if(inet_pton(AF_INET, argv[1], &serv_addr.sin_addr)<=0)
-    {
-        printf("\n inet_pton error occured\n");
-        return 1;
-    }
+    /* Bind to the broadcast port */
+    if (bind(sock, (struct sockaddr *) &broadcastAddr, sizeof(broadcastAddr)) < 0)
+        DieWithError("bind() failed");
 
-    if( connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
-    {
-       printf("\n Error : Connect Failed \n");
-       return 1;
-    }
+    /* Receive a single datagram from the server */
+    if ((recvStringLen = recvfrom(sock, recvString, MAXRECVSTRING, 0, NULL, 0)) < 0)
+        DieWithError("recvfrom() failed");
 
-    while ( (n = read(sockfd, recvBuff, sizeof(recvBuff)-1)) > 0)
-    {
-        recvBuff[n] = 0;
-        if(fputs(recvBuff, stdout) == EOF)
-        {
-            printf("\n Error : Fputs error\n");
-        }
-    }
+    recvString[recvStringLen] = '\0';
+    printf("Received: %s\n", recvString);    /* Print the received string */
+    
+    close(sock);
+    exit(0);
+}
 
-    if(n < 0)
-    {
-        printf("\n Read error \n");
-    }
-
-    return 0;
+void DieWithError(char *errorMessage)
+{
+    printf("%s\n", errorMessage);
+    exit(EXIT_FAILURE);
 }
