@@ -13,8 +13,8 @@
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
 
-#define WORKER_UDP_PORT 8001
-#define SUPERVISOR_MAIN_TCP_PORT 8003
+#define WORKER_UDP_PORT 5000
+#define SUPERVISOR_MAIN_TCP_PORT 5001
 
 struct calc_segm_arg_t
 {
@@ -27,9 +27,6 @@ typedef struct calc_segm_arg_t calc_segm_arg_t;
 extern int errno;
 
 int udp_broadcast();
-inline long int get_workers_num(char *argv[]);
-inline double get_segm_begin(char *argv[]);
-inline double get_segm_end(char *argv[]);
 double serve_workers(int main_tcp_sock_fd, double begin, double end, unsigned int workers_num);
 
 struct tcp_conn_t
@@ -47,15 +44,15 @@ typedef struct tcp_conn_t tcp_conn_t;
 
 int main(int argc, char *argv[])
 {
-    if (argc != 4)
+    if (argc != 2)
     {
-        printf("usage: supervisor <workers_num> <begin> <end>\n");
+        printf("usage: master <workers_num>\n");
         return -1;
     }
     
-    long int workers_num = get_workers_num(argv);
-    double begin = get_segm_begin(argv);
-    double end = get_segm_end(argv);
+    long int workers_num = strtol(argv[1], NULL, 10);
+    double begin = 1.0;
+    double end = 1000.0;
 
     int main_tcp_sock_fd = socket(PF_INET, SOCK_STREAM | SOCK_NONBLOCK, IPPROTO_TCP);
     
@@ -72,7 +69,7 @@ int main(int argc, char *argv[])
     
     listen(main_tcp_sock_fd, workers_num);
 
-    printf("Looking for workers...\n");
+    //printf("Looking for workers...\n");
     errno = 0;
     if (udp_broadcast() != 0)
     {
@@ -80,7 +77,7 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    printf("Result is %lg\n", serve_workers(main_tcp_sock_fd, begin, end, workers_num));
+    printf("Result: %lg\n", serve_workers(main_tcp_sock_fd, begin, end, workers_num));
 
     return 0;
 }
@@ -119,7 +116,7 @@ double serve_workers(int main_tcp_sock_fd, double begin, double end, unsigned in
         {
             if (accepted == workers_num)
             {
-                printf("Excess worker tried to connect. Connection will be refused.\n");
+                //printf("Excess worker tried to connect. Connection will be refused.\n");
                 int sock_fd = accept(main_tcp_sock_fd, NULL, NULL);
                 close(sock_fd);
             }
@@ -139,7 +136,7 @@ double serve_workers(int main_tcp_sock_fd, double begin, double end, unsigned in
                 setsockopt(workers[accepted].sock_fd, SOL_TCP, TCP_KEEPCNT, &keepcnt, sizeof(keepcnt));
              
                 inet_ntop(AF_INET, &(workers[accepted].sock_in.sin_addr), str_addr, INET_ADDRSTRLEN);
-                printf("Worker at %s:%d connected.\n", str_addr, ntohs(workers[accepted].sock_in.sin_port));
+                //printf("Worker at %s:%d connected.\n", str_addr, ntohs(workers[accepted].sock_in.sin_port));
                 
                 workers[accepted].accepted = true;
                 workers[accepted].sent     = false;
@@ -162,7 +159,7 @@ double serve_workers(int main_tcp_sock_fd, double begin, double end, unsigned in
                 cur_begin = workers[i].arg.end;
                 if (send(workers[i].sock_fd, &workers[i].arg, sizeof(calc_segm_arg_t), 0) != sizeof(calc_segm_arg_t))
                 {
-                    printf("Error during sending args.\n");
+                    printf("Error sending args.\n");
                     exit(-1);
                 }
                 workers[i].sent = true;
@@ -173,7 +170,7 @@ double serve_workers(int main_tcp_sock_fd, double begin, double end, unsigned in
                 {
                     if (recv(workers[i].sock_fd, &workers[i].threads_num, sizeof(int), 0) != sizeof(int))
                     {
-                        printf("Error during receiving threads_num.\n");
+                        printf("Error receiving threads_num.\n");
                         exit(-1);
                     }
                     ++workers_threads_num_known;
@@ -184,7 +181,7 @@ double serve_workers(int main_tcp_sock_fd, double begin, double end, unsigned in
                     double worker_result = 0.;
                     if (recv(workers[i].sock_fd, &worker_result, sizeof(double), 0) != sizeof(double))
                     {
-                        printf("Error during receiving result.\n");
+                        printf("Error receiving result.\n");
                         exit(-1);
                     }
                     workers[i].received = true;
@@ -246,65 +243,3 @@ int udp_broadcast()
     
     return 0;
 }
-
-double get_segm_end(char *argv[])
-{
-    char *endptr;
-    errno = 0;
-    double end = strtod(argv[3], &endptr);
-    if (errno == ERANGE)
-    {
-        printf("End of segment is out of range.\n");
-        exit(-1);
-    }
-    else if (*endptr != '\0')
-    {
-        printf("Invalid end of segment.\n");
-        exit(-1);
-    }
-
-    return end;    
-}
-
-double get_segm_begin(char *argv[])
-{
-    char *endptr;
-    errno = 0;
-    double begin = strtod(argv[2], &endptr);
-    if (errno == ERANGE)
-    {
-        printf("Begin of segment is out of range.\n");
-        exit(-1);
-    }
-    else if (*endptr != '\0')
-    {
-        printf("Invalid begin of segment.\n");
-        exit(-1);
-    }
-
-    return begin;    
-}
-
-long int get_workers_num(char *argv[])
-{
-    char *endptr;
-    errno = 0;
-    long int workers_num = strtol(argv[1], &endptr, 10);
-    if (errno == ERANGE)
-    {
-        printf("Number of workers is out of range.\n");
-        exit(-1);
-    }
-    else if (*endptr != '\0')
-    {
-        printf("Invalid number of workers.\n");
-        exit(-1);
-    }
-    else if (workers_num <= 0)
-    {
-        printf("Nonpositive number of workers.\n");
-        exit(-1);
-    }
-
-    return workers_num;      
-}   

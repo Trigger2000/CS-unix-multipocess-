@@ -18,8 +18,8 @@
 #define FUNC(x) (sin(x))
 #define DELTA (0.00001)
 
-#define WORKER_UDP_PORT 8001
-#define SUPERVISOR_MAIN_TCP_PORT 8003
+#define WORKER_UDP_PORT 5000
+#define SUPERVISOR_MAIN_TCP_PORT 5001
 
 struct calc_segm_arg_t
 {
@@ -40,7 +40,6 @@ struct calc_subsegm_arg_t
 
 typedef struct calc_subsegm_arg_t calc_subsegm_arg_t;
 
-inline long int get_threads_num(char *argv[]);
 int tcp_serve(struct sockaddr_in *sock_in, int threads_num);
 int udp_receive(struct sockaddr_in *sock_in, socklen_t *sock_len);
 double calc_segm(calc_segm_arg_t arg, int threads_num);
@@ -54,14 +53,11 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    int threads_num = get_threads_num(argv);
-
-    printf("Threads num is %d\n", threads_num);
+    int threads_num = strtol(argv[1], NULL, 10);
 
     socklen_t udp_sock_in_len = sizeof(struct sockaddr_in);
     struct sockaddr_in udp_sock_in = {0};
 
-    printf("Waiting for supervisors' requests...\n");
     errno = 0;
     if (udp_receive(&udp_sock_in, &udp_sock_in_len) != 0)
     {
@@ -71,7 +67,6 @@ int main(int argc, char *argv[])
 
     char str_addr[INET_ADDRSTRLEN] = {0};
     inet_ntop(AF_INET, &(udp_sock_in.sin_addr.s_addr), str_addr, INET_ADDRSTRLEN);
-    printf("Received broadcast request from supervisor at %s:%d\n", str_addr, ntohs(udp_sock_in.sin_port));
     
     struct sockaddr_in tcp_sock_in = {0};
 
@@ -79,7 +74,6 @@ int main(int argc, char *argv[])
     tcp_sock_in.sin_port = htons(SUPERVISOR_MAIN_TCP_PORT);
     tcp_sock_in.sin_family = AF_INET;
 
-    printf("Connecting to supevisor...\n");
     errno = 0;
     if (tcp_serve(&tcp_sock_in, threads_num) != 0)
     {
@@ -171,8 +165,6 @@ double calc_segm(struct calc_segm_arg_t arg, int threads_num)
     double segm_begin = arg.begin;
     double segm_end = arg.end;
 
-    printf("Segment is [%lg;%lg]\n", segm_begin, segm_end);
-
     pthread_t *threads = (pthread_t *)malloc(threads_num * sizeof(pthread_t));
     calc_subsegm_arg_t *args = (calc_subsegm_arg_t *)malloc(threads_num * sizeof(struct calc_subsegm_arg_t));
     
@@ -221,27 +213,3 @@ void *calc_subsegm(void *arguments)
 
     return NULL;
 }
-
-long int get_threads_num(char *argv[])
-{
-    char *endptr;
-    errno = 0;
-    long int threads_num = strtol(argv[1], &endptr, 10);
-    if (errno == ERANGE)
-    {
-        printf("Number of threads is out of range.\n");
-        exit(-1);
-    }
-    else if (*endptr != '\0')
-    {
-        printf("Invalid number of threads.\n");
-        exit(-1);
-    }
-    else if (threads_num <= 0)
-    {
-        printf("Nonpositive number of threads.\n");
-        exit(-1);
-    }
-
-    return threads_num;      
-}   

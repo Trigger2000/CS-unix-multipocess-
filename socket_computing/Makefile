@@ -1,6 +1,6 @@
-all: supervisor worker
+all: master worker
 
-supervisor: supervisor.c 
+supervisor: master.c 
 	$(CC) $(CFLAGS) -o $@ $^
 
 worker: worker.c
@@ -10,4 +10,4 @@ CFLAGS := -Wall -O2 -std=c99
 .PHONY: all clean
 
 clean:
-	rm -rf *.o supervisor worker
+	rm -rf *.o master worker
