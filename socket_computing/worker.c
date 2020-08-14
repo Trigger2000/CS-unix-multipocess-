@@ -21,15 +21,15 @@
 #define WORKER_UDP_PORT 5000
 #define SUPERVISOR_MAIN_TCP_PORT 5001
 
-struct calc_segm_arg_t
+struct segm
 {
     double begin;
     double end;
 };
 
-typedef struct calc_segm_arg_t calc_segm_arg_t;
+typedef struct segm segm;
 
-struct calc_subsegm_arg_t
+struct subsegm
 {
     double begin;
     double end;
@@ -38,14 +38,14 @@ struct calc_subsegm_arg_t
     unsigned int i;
 };
 
-typedef struct calc_subsegm_arg_t calc_subsegm_arg_t;
+typedef struct subsegm subsegm;
 
-int tcp_serve(struct sockaddr_in *sock_in, int threads_num);
-int udp_receive(struct sockaddr_in *sock_in, socklen_t *sock_len);
-double calc_segm(calc_segm_arg_t arg, int threads_num);
-void *calc_subsegm(void *arguments);
+int tcp_serve(struct sockaddr_in* sock_in, int threads_num);
+int udp_receive(struct sockaddr_in* sock_in, socklen_t* sock_len);
+double calc_segm(segm arg, int threads_num);
+void *calc_subsegm(void* arguments);
 
-int main(int argc, char *argv[])
+int main(int argc, char** argv)
 {
     if (argc != 2)
     {
@@ -103,27 +103,9 @@ int tcp_serve(struct sockaddr_in *sock_in, int threads_num)
     if (connect(sock_fd, (struct sockaddr *)sock_in, sizeof(struct sockaddr_in)) != 0)
         return -1;
     
-    calc_segm_arg_t arg;
-    
-    if (send(sock_fd, &threads_num, sizeof(int), 0) != sizeof(int))
-    {
-        printf("Failed to send num of threads.\n");
-        exit(-1);
-    }
-
-    if (recv(sock_fd, &arg, sizeof(struct calc_segm_arg_t), 0) != sizeof(struct calc_segm_arg_t))
-    {
-        printf("Failed to receive args.\n");
-        exit(-1);
-    }
+    segm arg;
 
     double result = calc_segm(arg, threads_num);
-
-    if (send(sock_fd, &result, sizeof(double), 0) != sizeof(double))
-    {
-        printf("Failed to send result.\n");
-        exit(-1);
-    }
 
     close(sock_fd);
 
@@ -160,16 +142,16 @@ int udp_receive(struct sockaddr_in *sock_in, socklen_t *sock_in_len)
     return 0;
 }
 
-double calc_segm(struct calc_segm_arg_t arg, int threads_num)
+double calc_segm(struct segm arg, int threads_num)
 {
     double segm_begin = arg.begin;
     double segm_end = arg.end;
 
     pthread_t *threads = (pthread_t *)malloc(threads_num * sizeof(pthread_t));
-    calc_subsegm_arg_t *args = (calc_subsegm_arg_t *)malloc(threads_num * sizeof(struct calc_subsegm_arg_t));
+    subsegm *args = (subsegm *)malloc(threads_num * sizeof(struct subsegm));
     
     for (unsigned int i = 0; i < threads_num; ++i)
-        args[i] = (calc_subsegm_arg_t){ 
+        args[i] = (subsegm){ 
             .begin = segm_begin,
             .end = segm_end,
             .i = i,
@@ -194,7 +176,7 @@ double calc_segm(struct calc_segm_arg_t arg, int threads_num)
 
 void *calc_subsegm(void *arguments)
 {      
-    calc_subsegm_arg_t *arg = (calc_subsegm_arg_t *)arguments;
+    subsegm *arg = (subsegm *)arguments;
 
     double subsegm_len = (arg->end - arg->begin) / arg->threads_num;
     unsigned long int subsubsegm_num = (unsigned long int)floor(subsegm_len / DELTA);
